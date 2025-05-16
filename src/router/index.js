@@ -1,6 +1,6 @@
-import { createRouter, createWebHistory } from 'vue-router';
-import HomeView from '../components/HomeView.vue';
-// import RegistrationView from '../views/RegistrationView.vue';
+import { createRouter, createWebHashHistory } from 'vue-router';
+import HomeView from '@/views/HomeView.vue';
+import Registration from '@/views/login/Registration.vue';
 
 const routes = [
   {
@@ -11,13 +11,13 @@ const routes = [
   {
     path: '/registration',
     name: 'registration',
-    // component: RegistrationView
+    component: Registration
   },
-  // Другие маршруты
+  // ... другие ваши маршруты (если есть)
 ];
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHashHistory(),
   routes
 });
 
