@@ -20,7 +20,7 @@
 </template>
 
 <script setup>
-import { VContainer, VRow, VCol, VBtn, VImg } from 'vuetify/components'; // <-- Проверьте точность импорта
+import { VContainer, VRow, VCol, VBtn, } from 'vuetify/components'; // <-- Проверьте точность импорта
 import logo from '@/assets/logo.png';
 </script>
 
