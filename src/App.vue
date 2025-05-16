@@ -1,23 +1,19 @@
 <template>
   <v-app>
     <v-main>
-      <HelloWorld/>
+      <router-view></router-view>
     </v-main>
   </v-app>
 </template>
 
 <script>
-import HelloWorld from './components/HelloWorld.vue'
+import { VApp, VMain } from 'vuetify/components';
 
 export default {
   name: 'App',
-
   components: {
-    HelloWorld,
+    VApp,
+    VMain,
   },
-
-  data: () => ({
-    //
-  }),
-}
+};
 </script>

@@ -7,6 +7,9 @@
     "paths": {
       "@/*": [
         "src/*"
+      ],
+      "@/components/*": [
+        "src/components/*"
       ]
     },
     "lib": [
@@ -15,5 +18,13 @@
       "dom.iterable",
       "scripthost"
     ]
-  }
+  },
+  "include": [
+    "src/**/*.js",
+    "src/**/*.jsx",
+    "src/**/*.vue"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }
