@@ -1,5 +1,28 @@
 # CalenDiary Frontend
 
+## Last Update
+
+For using the CalandarsView FullCalendar is needed!
+
+```bash
+npm install @fullcalendar/vue3 @fullcalendar/core @fullcalendar/daygrid @fullcalendar/timegrid @fullcalendar/interaction
+```
+
+**Reinstall of node-modules might be needed!**
+
+```bash
+rm -rf node_modules
+```
+
+```bash
+rm package-lock.json
+```
+**Reinstall**
+
+```bash
+npm install
+```
+
 ## Project Setup
 
 This project was built using Vue.js and utilizes the Vue CLI for development and production workflows. Below are the essential commands to get started.
