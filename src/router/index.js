@@ -1,7 +1,8 @@
 import { createRouter, createWebHashHistory } from 'vue-router';
 import HomeView from '@/views/HomeView.vue';
 import Registration from '@/views/login/Registration.vue';
-import SignIn from '@/views/login/SignIn.vue'; // <--- Добавьте этот импорт
+import SignIn from '@/views/login/SignIn.vue';
+import CalendarsView from '@/components/CalendarsView.vue'; // <--- Правильный путь теперь
 
 const routes = [
   {
@@ -17,8 +18,13 @@ const routes = [
   {
     path: '/signin',
     name: 'signin',
-    component: SignIn // <--- Используйте импортированный компонент
+    component: SignIn
   },
+  {
+    path: '/calendars',
+    name: 'calendars',
+    component: CalendarsView // <--- Правильный компонент теперь
+  }
   // ... другие ваши маршруты (если есть)
 ];
 

@@ -1,6 +1,6 @@
 import WebFont from 'webfontloader';
 
-export function loadFonts() { // Добавьте 'export' перед 'function'
+export function loadFonts() { 
   WebFont.load({
     google: {
       families: ['Roboto:400,500,700,400italic|Material+Icons'],

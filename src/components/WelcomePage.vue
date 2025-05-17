@@ -2,31 +2,39 @@
   <v-container>
     <v-row justify="center">
       <v-col cols="12" md="8" lg="6" class="text-center">
-        <img
+        <v-img
           :src="logo"
           max-width="200"
           class="mb-4"
-          alt="CalenDiary Logo"
-        >
+        ></v-img>
         <h1>Welcome to CalenDiary</h1>
-        <router-link to="/registration">
-          <v-btn color="primary" size="large">
+        <div class="button-group">
+          <v-btn to="/registration" color="primary" size="large" class="mr-2">
             Register
           </v-btn>
-        </router-link>
+          <v-btn to="/signin" color="secondary" size="large" class="mr-2">
+            Sign In
+          </v-btn>
+          <v-btn to="/calendars" color="info" size="large">
+            Calendars
+          </v-btn>
+        </div>
       </v-col>
     </v-row>
   </v-container>
 </template>
 
 <script setup>
-import { VContainer, VRow, VCol, VBtn, } from 'vuetify/components'; // <-- Проверьте точность импорта
+import { VContainer, VRow, VCol, VBtn, VImg } from 'vuetify/components';
 import logo from '@/assets/logo.png';
 </script>
 
 <style scoped>
-  /* Стили */
-  h1 {
-    font-size: 2rem;
-  }
+.button-group {
+  margin-top: 20px;
+}
+
+.mr-2 {
+  margin-right: 8px;
+}
 </style>

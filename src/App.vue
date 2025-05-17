@@ -11,7 +11,7 @@ import { VApp, VMain } from 'vuetify/components';
 
 export default {
   name: 'App',
-  components: { // <-- Добавьте эту секцию
+  components: { 
     VApp,
     VMain,
   },
