@@ -16,7 +16,7 @@
             Sign In
           </v-btn>
           <v-btn to="/calendars" color="info" size="large">
-            Calendars
+            Calendar
           </v-btn>
         </div>
       </v-col>
