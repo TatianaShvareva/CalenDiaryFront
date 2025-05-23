@@ -1,31 +1,37 @@
 <template>
   <div class="add-edit-event-view">
     <h1>Add/Edit Event - {{ selectedDate }}</h1>
-    <div class="split-layout">
-      <div class="calendar-sidebar">
-        <FullCalendar :options="miniCalendarOptions" />
-      </div>
-      <div class="event-form">
-        <v-text-field label="Event Title" v-model="eventTitle"></v-text-field>
-        <div class="time-pickers">
-          <v-time-picker label="From" v-model="fromTime"></v-time-picker>
-          <v-time-picker label="Until" v-model="untilTime"></v-time-picker>
-        </div>
-        <v-text-field label="Location" v-model="location"></v-text-field>
-        <v-textarea label="Description" v-model="description"></v-textarea>
-        <v-combobox label="Tags" :items="tags" v-model="selectedTags" multiple></v-combobox>
-        <div class="mood-o-meter">
-          <span>Mood:</span>
-          <v-btn icon="mdi-heart" :color="mood === 'red' ? 'red' : 'grey'" @click="mood = 'red'"></v-btn>
-          <v-btn icon="mdi-heart" :color="mood === 'orange' ? 'orange' : 'grey'" @click="mood = 'orange'"></v-btn>
-          <v-btn icon="mdi-heart" :color="mood === 'yellow' ? 'yellow' : 'grey'" @click="mood = 'yellow'"></v-btn>
-          <v-btn icon="mdi-heart" :color="mood === 'green' ? 'green' : 'grey'" @click="mood = 'green'"></v-btn>
-          <v-btn icon="mdi-heart" :color="mood === 'blue' ? 'blue' : 'grey'" @click="mood = 'blue'"></v-btn>
-        </div>
-        <v-textarea label="Diary" v-model="diaryEntry"></v-textarea>
-        <v-btn color="primary" @click="saveEvent">Save Changes</v-btn>
-      </div>
-    </div>
+    <v-container>
+      <v-row>
+        <v-col cols="12" md="4">
+          <div class="calendar-sidebar">
+            <FullCalendar :options="miniCalendarOptions" />
+          </div>
+        </v-col>
+        <v-col cols="12" md="8">
+          <div class="event-form">
+            <v-text-field label="Event Title" v-model="eventTitle"></v-text-field>
+            <div class="time-pickers">
+              <TimePicker label="From" v-model="fromTime" />
+              <DateAndTimePicker v-model="untilDateTime" label="Until" />
+            </div>
+            <v-text-field label="Location" v-model="location"></v-text-field>
+            <v-textarea label="Description" v-model="description"></v-textarea>
+            <v-combobox label="Tags" :items="tags" v-model="selectedTags" multiple></v-combobox>
+            <div class="mood-o-meter">
+              <span>Mood:</span>
+              <v-btn icon="mdi-heart" :color="mood === 'red' ? 'red' : 'grey'" @click="mood = 'red'"></v-btn>
+              <v-btn icon="mdi-heart" :color="mood === 'orange' ? 'orange' : 'grey'" @click="mood = 'orange'"></v-btn>
+              <v-btn icon="mdi-heart" :color="mood === 'yellow' ? 'yellow' : 'grey'" @click="mood = 'yellow'"></v-btn>
+              <v-btn icon="mdi-heart" :color="mood === 'green' ? 'green' : 'grey'" @click="mood = 'green'"></v-btn>
+              <v-btn icon="mdi-heart" :color="mood === 'blue' ? 'blue' : 'grey'" @click="mood = 'blue'"></v-btn>
+            </div>
+            <v-textarea label="Diary" v-model="diaryEntry"></v-textarea>
+            <v-btn color="primary" @click="saveEvent">Save Changes</v-btn>
+          </div>
+        </v-col>
+      </v-row>
+    </v-container>
   </div>
 </template>
 
@@ -35,15 +41,19 @@ import { useRoute } from 'vue-router';
 import FullCalendar from '@fullcalendar/vue3';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
+import TimePicker from '@/components/CalendarEvents/TimePicker.vue';
+import DateAndTimePicker from '@/components/CalendarEvents/DateAndTimePicker.vue';
+
 
 const route = useRoute();
 const selectedDate = ref(route.params.date);
+const initialDate = new Date(selectedDate.value);
+const fromTime = ref({ hour: initialDate.getHours(), minute: initialDate.getMinutes() });
+const untilDateTime = ref('');
 const tags = ref(['Study', 'Work', 'Personal Appointment', 'Healthcare', 'Sport Activity', 'Travel', 'Other']);
 
 // Данные формы
 const eventTitle = ref('');
-const fromTime = ref(null);
-const untilTime = ref(null);
 const location = ref('');
 const description = ref('');
 const selectedTags = ref([]);
@@ -64,18 +74,18 @@ function handleMiniCalendarDateClick(arg) {
 }
 
 function saveEvent() {
-  // Здесь нужно будет реализовать логику сохранения данных события
   const eventData = {
     date: selectedDate.value,
     title: eventTitle.value,
     fromTime: fromTime.value,
-    untilTime: untilTime.value,
+    untilTime: untilDateTime.value, // <-- updated
     location: location.value,
     description: description.value,
     tags: selectedTags.value,
     mood: mood.value,
     diaryEntry: diaryEntry.value,
   };
+
   console.log('Saving event:', eventData);
   // Отправьте eventData на сервер (позже)
 }
@@ -93,17 +103,23 @@ onMounted(() => {
   padding: 20px;
 }
 
-.split-layout {
+/* Эти стили .split-layout и .calendar-sidebar, .event-form больше не нужны,
+   поскольку вы используете Vuetify Grid (v-container, v-row, v-col) для разметки.
+   Vuetify Grid сам управляет шириной и отступами. */
+/* .split-layout {
   display: flex;
   gap: 20px;
-}
+} */
 
 .calendar-sidebar {
-  width: 30%;
+  /* width: 30%; */ /* Удалить или переопределить, Vuetify v-col управляет шириной */
+  border: 1px solid #eee;
+  padding: 10px;
+  border-radius: 4px;
 }
 
 .event-form {
-  width: 70%;
+  /* width: 70%; */ /* Удалить или переопределить, Vuetify v-col управляет шириной */
   display: flex;
   flex-direction: column;
   gap: 15px;
@@ -111,7 +127,8 @@ onMounted(() => {
 
 .time-pickers {
   display: flex;
-  gap: 10px;
+  gap: 16px;
+  align-items: center;
 }
 
 .mood-o-meter {
@@ -119,48 +136,42 @@ onMounted(() => {
   align-items: center;
   gap: 10px;
 }
-.calendar-sidebar {
-  width: 30%;
-  border: 1px solid #eee; /* Optional: Add a border for visual separation */
-  padding: 10px;
-  border-radius: 4px; /* Optional: Add rounded corners */
+
+.fc-view-harness {
+  max-width: 100% !important;
+  height: auto !important;
 }
 
-.fc-view-harness { /* Adjust the overall container of the calendar */
-  max-width: 100% !important; /* Ensure it fits within the sidebar */
-  height: auto !important; /* Adjust height automatically */
-}
-
-.fc-header-toolbar { /* Hide the header toolbar (prev/next buttons, title) */
+.fc-header-toolbar {
   display: none !important;
 }
 
-.fc-day-header { /* Style the day headers (Mon, Tue, etc.) */
+.fc-day-header {
   font-size: 0.8em;
   padding: 0.5em 0;
   text-align: center;
 }
 
-.fc-daygrid-day-frame { /* Style the day cells */
+.fc-daygrid-day-frame {
   padding: 0.3em;
-  min-height: auto !important; /* Adjust min-height */
+  min-height: auto !important;
 }
 
-.fc-daygrid-day-number { /* Style the day numbers */
+.fc-daygrid-day-number {
   font-size: 0.9em;
   text-align: left;
   padding: 0.2em;
 }
 
-.fc-today { /* Style the 'today' cell */
-  background-color: #f0f8ff; /* Light blue or any subtle highlight */
+.fc-today {
+  background-color: #f0f8ff;
 }
 
-.fc-event { /* Style the event dots/indicators (if you implement them) */
+.fc-event {
   font-size: 0.7em;
   padding: 0.1em 0.3em;
   margin-bottom: 0.1em;
-  background-color: #a9a9a9; /* Light grey */
+  background-color: #a9a9a9;
   color: white;
   border-radius: 3px;
 }
