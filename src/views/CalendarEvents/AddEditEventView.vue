@@ -1,34 +1,79 @@
 <template>
   <div class="add-edit-event-view">
-    <h1>Add/Edit Event - {{ selectedDate }}</h1>
-    <v-container>
+    <v-container fluid class="py-6 px-4">
+      <h1 class="text-h5 mb-6 text-center text-md-left">
+        What is your day today? - {{ formattedSelectedDate }}
+      </h1>
+
       <v-row>
-        <v-col cols="12" md="4">
-          <div class="calendar-sidebar">
-            <FullCalendar :options="miniCalendarOptions" />
-          </div>
+        <!-- Mini calendar first (left side) -->
+        <v-col cols="12" md="4" class="d-flex align-self-start">
+          <CalendarSidebar
+            :initial-date="selectedDate"
+            :on-date-click="handleMiniCalendarDateClick"
+            class="flex-grow-1" />
         </v-col>
+        <!-- Event form second (right side) -->
         <v-col cols="12" md="8">
-          <div class="event-form">
-            <v-text-field label="Event Title" v-model="eventTitle"></v-text-field>
-            <div class="time-pickers">
-              <TimePicker label="From" v-model="fromTime" />
-              <DateAndTimePicker v-model="untilDateTime" label="Until" />
+          <v-card flat class="pa-4 pa-sm-6 elevation-1">
+            <div class="event-form">
+              <v-text-field
+                label="Event Title"
+                v-model="eventTitle"
+                variant="outlined"
+                density="comfortable"
+                hide-details
+              ></v-text-field>
+
+              <div class="time-pickers">
+                <TimePicker
+                  label="From"
+                  v-model="fromTime"
+                  density="comfortable"
+                  variant="outlined"
+                  style="max-width: 170px;"
+                />
+                <DateAndTimePicker
+                  v-model="untilDateTime"
+                  label="Until"
+                  density="comfortable"
+                  variant="outlined"
+                  style="max-width: 220px;"
+                />
+              </div>
+
+              <v-text-field
+                label="Location"
+                v-model="location"
+                variant="outlined"
+                density="comfortable"
+                hide-details
+              ></v-text-field>
+
+              <v-textarea
+                label="Description"
+                v-model="description"
+                variant="outlined"
+                density="comfortable"
+                hide-details
+                rows="3"
+              ></v-textarea>
+
+              <EventTags v-model="selectedTags" :available-tags="tags" />
+
+              <MoodOMeter v-model="mood" />
+
+              <v-textarea
+                label="Diary"
+                v-model="diaryEntry"
+                variant="outlined"
+                density="comfortable"
+                rows="4"
+              ></v-textarea>
+
+              <v-btn color="primary" class="mt-4" block @click="saveEvent">Save Changes</v-btn>
             </div>
-            <v-text-field label="Location" v-model="location"></v-text-field>
-            <v-textarea label="Description" v-model="description"></v-textarea>
-            <v-combobox label="Tags" :items="tags" v-model="selectedTags" multiple></v-combobox>
-            <div class="mood-o-meter">
-              <span>Mood:</span>
-              <v-btn icon="mdi-heart" :color="mood === 'red' ? 'red' : 'grey'" @click="mood = 'red'"></v-btn>
-              <v-btn icon="mdi-heart" :color="mood === 'orange' ? 'orange' : 'grey'" @click="mood = 'orange'"></v-btn>
-              <v-btn icon="mdi-heart" :color="mood === 'yellow' ? 'yellow' : 'grey'" @click="mood = 'yellow'"></v-btn>
-              <v-btn icon="mdi-heart" :color="mood === 'green' ? 'green' : 'grey'" @click="mood = 'green'"></v-btn>
-              <v-btn icon="mdi-heart" :color="mood === 'blue' ? 'blue' : 'grey'" @click="mood = 'blue'"></v-btn>
-            </div>
-            <v-textarea label="Diary" v-model="diaryEntry"></v-textarea>
-            <v-btn color="primary" @click="saveEvent">Save Changes</v-btn>
-          </div>
+          </v-card>
         </v-col>
       </v-row>
     </v-container>
@@ -36,23 +81,23 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
-import FullCalendar from '@fullcalendar/vue3';
-import dayGridPlugin from '@fullcalendar/daygrid';
-import interactionPlugin from '@fullcalendar/interaction';
+
+import CalendarSidebar from '@/components/CalendarEvents/CalendarSidebar.vue';
 import TimePicker from '@/components/CalendarEvents/TimePicker.vue';
 import DateAndTimePicker from '@/components/CalendarEvents/DateAndTimePicker.vue';
-
+import EventTags from '@/components/CalendarEvents/EventTags.vue';
+import MoodOMeter from '@/components/CalendarEvents/MoodOMeter.vue';
 
 const route = useRoute();
-const selectedDate = ref(route.params.date);
-const initialDate = new Date(selectedDate.value);
-const fromTime = ref({ hour: initialDate.getHours(), minute: initialDate.getMinutes() });
+
+const selectedDate = ref(new Date().toISOString().split('T')[0]);
+const fromTime = ref({ hour: 0, minute: 0 });
 const untilDateTime = ref('');
+
 const tags = ref(['Study', 'Work', 'Personal Appointment', 'Healthcare', 'Sport Activity', 'Travel', 'Other']);
 
-// Данные формы
 const eventTitle = ref('');
 const location = ref('');
 const description = ref('');
@@ -60,17 +105,36 @@ const selectedTags = ref([]);
 const mood = ref(null);
 const diaryEntry = ref('');
 
-const miniCalendarOptions = ref({
-  plugins: [dayGridPlugin, interactionPlugin],
-  initialDate: selectedDate.value,
-  headerToolbar: false,
-  aspectRatio: 1,
-  dateClick: handleMiniCalendarDateClick,
+// Format selectedDate as "15 May 2025"
+const formattedSelectedDate = computed(() => {
+  if (!selectedDate.value) return '';
+  const dateObj = new Date(selectedDate.value);
+  return dateObj.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  });
 });
 
+const updateTimePickers = (dateString) => {
+  const dateObj = new Date(dateString);
+  if (!isNaN(dateObj.getTime())) {
+    fromTime.value = { hour: dateObj.getHours(), minute: dateObj.getMinutes() };
+    // untilDateTime можно тоже обновить, если это логично
+    // untilDateTime.value = dateObj.toISOString();
+  } else {
+    console.error('Failed to parse date for time pickers:', dateString);
+    fromTime.value = { hour: 8, minute: 0 };
+  }
+};
+
+// When a date is clicked in the mini calendar, set selectedDate and update untilDateTime
 function handleMiniCalendarDateClick(arg) {
-  console.log('Clicked date in mini-calendar:', arg.dateStr);
-  // Здесь можно реализовать логику при клике на дату в мини-календаре
+  console.log('Clicked date in mini-calendar from parent:', arg.dateStr);
+  selectedDate.value = arg.dateStr;
+  updateTimePickers(arg.dateStr);
+  // Set untilDateTime to the clicked date with a default time (e.g., 18:00)
+  untilDateTime.value = `${arg.dateStr}T18:00`;
 }
 
 function saveEvent() {
@@ -78,101 +142,57 @@ function saveEvent() {
     date: selectedDate.value,
     title: eventTitle.value,
     fromTime: fromTime.value,
-    untilTime: untilDateTime.value, // <-- updated
+    untilTime: untilDateTime.value,
     location: location.value,
     description: description.value,
     tags: selectedTags.value,
     mood: mood.value,
     diaryEntry: diaryEntry.value,
   };
-
   console.log('Saving event:', eventData);
-  // Отправьте eventData на сервер (позже)
 }
 
 onMounted(() => {
-  console.log('Selected date from route:', selectedDate.value);
+  if (route.params.date) {
+    selectedDate.value = String(route.params.date);
+    console.log('AddEditEventView: Initial selectedDate from route:', selectedDate.value);
+  } else {
+    console.warn('AddEditEventView: No date provided in route params. Using default today:', selectedDate.value);
+  }
+  updateTimePickers(selectedDate.value);
 });
 </script>
 
 <style scoped>
-/* Стили, которые мы добавляли ранее */
 .add-edit-event-view {
-  display: flex;
-  flex-direction: column;
-  padding: 20px;
-}
-
-/* Эти стили .split-layout и .calendar-sidebar, .event-form больше не нужны,
-   поскольку вы используете Vuetify Grid (v-container, v-row, v-col) для разметки.
-   Vuetify Grid сам управляет шириной и отступами. */
-/* .split-layout {
-  display: flex;
-  gap: 20px;
-} */
-
-.calendar-sidebar {
-  /* width: 30%; */ /* Удалить или переопределить, Vuetify v-col управляет шириной */
-  border: 1px solid #eee;
-  padding: 10px;
-  border-radius: 4px;
+  min-height: 100vh;
+  background-color: #f5f5f5;
 }
 
 .event-form {
-  /* width: 70%; */ /* Удалить или переопределить, Vuetify v-col управляет шириной */
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 20px;
+  max-width: 600px;
+  width: 100%;
 }
 
 .time-pickers {
   display: flex;
   gap: 16px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
-.mood-o-meter {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.v-btn {
+  text-transform: none;
 }
 
-.fc-view-harness {
-  max-width: 100% !important;
-  height: auto !important;
+.v-row {
+  flex-wrap: nowrap !important;
 }
 
-.fc-header-toolbar {
-  display: none !important;
-}
-
-.fc-day-header {
-  font-size: 0.8em;
-  padding: 0.5em 0;
-  text-align: center;
-}
-
-.fc-daygrid-day-frame {
-  padding: 0.3em;
-  min-height: auto !important;
-}
-
-.fc-daygrid-day-number {
-  font-size: 0.9em;
-  text-align: left;
-  padding: 0.2em;
-}
-
-.fc-today {
-  background-color: #f0f8ff;
-}
-
-.fc-event {
-  font-size: 0.7em;
-  padding: 0.1em 0.3em;
-  margin-bottom: 0.1em;
-  background-color: #a9a9a9;
-  color: white;
-  border-radius: 3px;
+.v-col {
+  min-width: 0;
 }
 </style>
