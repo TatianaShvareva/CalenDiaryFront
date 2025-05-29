@@ -2,14 +2,7 @@
   <v-app>
     <v-app-bar app color="white" flat class="border-b">
       <v-container class="d-flex align-center py-0">
-        <v-img
-          :src="logo"
-          alt="CalenDiary Logo"
-          max-height="40"
-          max-width="40"
-          contain
-          class="mr-2"
-        ></v-img>
+        <v-img :src="logo" alt="CalenDiary Logo" max-height="40" max-width="40" contain class="mr-2"></v-img>
 
         <span class="text-h6 font-weight-bold text-blue-grey-darken-3 mr-4">CalenDiary</span>
 
@@ -51,14 +44,7 @@
       <v-container class="py-4 px-4 text-grey-darken-1" fluid>
         <v-row class="align-center py-2">
           <v-col cols="12" md="6" class="d-flex align-center">
-            <v-img
-              :src="logo"
-              alt="CalenDiary Logo"
-              max-height="30"
-              max-width="90"
-              contain
-              class="mr-3"
-            ></v-img>
+            <v-img :src="logo" alt="CalenDiary Logo" max-height="30" max-width="90" contain class="mr-3"></v-img>
             <span class="text-h6 font-weight-bold text-blue-grey-darken-3">CalenDiary</span>
           </v-col>
           <v-col cols="12" md="6" class="text-md-right text-left">
@@ -142,7 +128,9 @@ const drawer = ref(false);
 .v-btn.v-btn--active,
 .v-btn:focus,
 .v-list-item--active,
-.v-list-item:focus {
+.v-list-item:focus,
+.v-list-item--active .v-list-item-title,
+.v-list-item:focus .v-list-item-title {
   background-color: transparent !important;
   color: #1976D2 !important;
   box-shadow: none !important;
@@ -150,7 +138,8 @@ const drawer = ref(false);
 
 /* Only highlight on hover */
 .v-btn:hover,
-.v-list-item:hover {
+.v-list-item:hover,
+.v-list-item:hover .v-list-item-title {
   background-color: rgba(25, 118, 210, 0.08) !important;
   color: #1976D2 !important;
 }

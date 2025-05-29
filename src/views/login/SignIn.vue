@@ -1,102 +1,86 @@
 <template>
-  <div class="signin">
-    <form @submit.prevent="signIn">
-      <h2 class="error-message">{{ signInError }}</h2>
-      <div class="form-group" id='loginEmail'>
-      <input
-          type="text"
-          name="email"
-          placeholder="Email"
-          v-model="data.email"
-          class="form-input"
-      />
-    </div>
-    <div  class="form-group" id='loginPass'>
-      <input
-        type="password"
-        name="password"
-        placeholder="Password"
-        v-model="data.password"
-        class="form-input"
-      />
-    </div>
-    <button class="btn-submit" id='login'>Sign in</button>
-    </form>
-  </div>
+  <v-container>
+    <v-row justify="center">
+      <v-col cols="12" md="8" lg="6">
+        <v-card class="pa-6">
+          <v-card-title class="text-h5 mb-4">Sign In</v-card-title>
+          <v-form @submit.prevent="signInLocal">
+            <v-alert v-if="signInError" type="error" dense dismissible class="mb-4">
+              {{ signInError }}
+            </v-alert>
+
+            <v-text-field
+              v-model="data.email"
+              label="Email"
+              placeholder="Enter your email"
+              type="email"
+            ></v-text-field>
+
+            <v-text-field
+              v-model="data.password"
+              label="Password"
+              placeholder="Enter your password"
+              type="password"
+            ></v-text-field>
+
+            <v-btn type="submit" color="primary" block size="large" class="mt-4">
+              Sign In
+            </v-btn>
+
+            </v-form>
+        </v-card>
+      </v-col>
+    </v-row>
+  </v-container>
 </template>
 
 <script>
-  import { mapGetters } from 'vuex';
+import { mapGetters, mapActions } from 'vuex';
+import { VContainer, VRow, VCol, VCard, VCardTitle, VForm, VTextField, VBtn, VAlert } from 'vuetify/components';
 
-  export default {
-    name: 'signIn',
-    components: {
-      //
-    },
-    data() {
-      return {
-        data: {
-          email: '',
-          password: ''
-        }
+export default {
+  name: 'signIn',
+  components: {
+    VContainer, VRow, VCol, VCard, VCardTitle, VForm, VTextField, VBtn, VAlert,
+    // Removed VDivider, VIcon as they are no longer used
+  },
+  data() {
+    return {
+      data: {
+        email: '',
+        password: ''
+      }
+    }
+  },
+
+  methods: {
+    // Connect the 'signIn' action from Vuex
+    ...mapActions('auth', ['signIn']), // Removed 'loginWithGithub'
+
+    // Local method to dispatch the Vuex 'signIn' action
+    async signInLocal() {
+      // Clear previous backend errors to ensure a clean state
+      this.$store.commit('auth/CLEAR_AUTH_ERRORS');
+      try {
+        await this.$store.dispatch('auth/signIn', this.data);
+        // Redirection typically occurs inside the Vuex action upon successful login
+      } catch (error) {
+        // Errors are already handled in Vuex and stored in `signInError`
+        console.log('Sign In dispatch failed in component (expected for invalid credentials).');
       }
     },
+  },
 
-    methods: {
-      async signIn() {
-        this.$store.dispatch('auth/signIn', this.data)
-          .then(() => {
-            if (this.authenticated) {
-              this.$router.push('/')
-            }
-          })
-      },
-    },
-    computed: {
-      ...mapGetters('auth', ['authenticated', 'username', 'signInError']),
-    }
+  computed: {
+    ...mapGetters('auth', ['authenticated', 'signInError']),
+  },
+  mounted() {
+    // Clear errors when the component is mounted to ensure a clean state
+    this.$store.commit('auth/CLEAR_AUTH_ERRORS');
   }
+}
 </script>
 
 <style scoped>
-/* Ваши локальные стили для этого компонента могут быть добавлены здесь */
-.signin {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 20px;
-}
-
-.error-message {
-  color: red;
-  margin-bottom: 10px;
-}
-
-.form-group {
-  margin-bottom: 15px;
-  width: 100%;
-  max-width: 300px;
-}
-
-.form-input {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  box-sizing: border-box;
-}
-
-.btn-submit {
-  padding: 10px 20px;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 16px;
-}
-
-.btn-submit:hover {
-  background-color: #0056b3;
-}
+/* Component-specific styles can be added here */
 </style>
