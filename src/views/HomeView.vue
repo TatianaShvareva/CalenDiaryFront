@@ -10,10 +10,6 @@ import HomePageContent from '@/components/HomePageContent.vue';
 
 <style scoped>
 .home-view {
-  /* display: flex; */
-  /* justify-content: center; */
-  /* align-items: center; */
-  /* min-height: 100vh; */
-  /* background-color: #f5f5f5; */
+  /* Удалены все закомментированные стили */
 }
 </style>

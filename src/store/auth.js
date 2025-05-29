@@ -1,10 +1,15 @@
 // C:\Users\human\.vscode\CalenDiaryFront\calendiary-frontend\src\store\auth.js
+
 import axios from '@/api/axios'; // Import our configured axios instance
 import router from '@/router'; // Import router for redirections
+// import { jwtDecode } from 'jwt-decode'; // <-- Раскомментировать, если решите декодировать JWT для email (пока не требуется)
 
 // Constants for API URLs
 const AUTH_API_PREFIX = '/auth'; // Prefix for all authentication endpoints
-// const OAUTH2_GITHUB_URL = 'http://localhost:8001/oauth2/authorization/github'; // Removed: GitHub OAuth2 URL is no longer needed
+
+// НОВАЯ КОНСТАНТА ДЛЯ GITHUB OAUTH2
+const OAUTH2_GITHUB_AUTH_URL = 'http://localhost:8001/oauth2/authorization/github'; // URL для начала GitHub OAuth2 потока
+// Убедитесь, что этот URL правильный и соответствует вашему бэкенду.
 
 const authModule = {
   namespaced: true,
@@ -77,7 +82,6 @@ const authModule = {
       state.user = { id: null, name: null, email: null, role: null }; // Reset user state on logout
       localStorage.clear(); // Clear all localStorage for a clean state
     },
-    // Removed: foldersData mutation is not needed in the auth module
   },
 
   actions: {
@@ -85,26 +89,26 @@ const authModule = {
       commit('CLEAR_AUTH_ERRORS'); // Clear previous errors
 
       try {
-        // Use headers: { skipAuthorization: true } so Axios interceptor doesn't try to add a token
         const response = await axios.post(`${AUTH_API_PREFIX}/register`, userData, {
           headers: { skipAuthorization: true }
         });
 
-        // Backend returns token, id, name, email, role after registration
+        // Внимательно: если бэкенд возвращает только текстовое сообщение "User registered successfully",
+        // тогда response.data.token будет undefined, и код пойдет в else.
+        // Если бэкенд возвращает токен после регистрации, то это хорошо.
         if (response.data && response.data.token) {
           commit('SET_AUTH_DATA', {
             token: response.data.token,
             user: {
               id: response.data.id,
-              name: response.data.name, // Use 'name' from backend response
+              name: response.data.name,
               email: response.data.email,
               role: response.data.role
             }
           });
           alert('Registration successful! You are now logged in.');
-          router.push('/');
+          router.push('/calendars');
         } else {
-          // If for some reason the token was not returned, but status is 200
           alert('Registration successful! Please sign in.');
           router.push('/signin');
         }
@@ -112,80 +116,50 @@ const authModule = {
         console.error('Registration failed:', error.response || error);
         let errorMessage = 'An unexpected error occurred during registration.';
         if (error.response && error.response.data) {
-          // If backend returns an object with validation errors (e.g., from Spring Boot)
           if (typeof error.response.data === 'object' && error.response.data.message) {
-            errorMessage = error.response.data.message; // Example: if error is in 'message' field
+            errorMessage = error.response.data.message;
           } else if (typeof error.response.data === 'string') {
             errorMessage = error.response.data;
-          } else if (error.response.data.errors) { // For field validation errors, if any
+          } else if (error.response.data.errors) {
             errorMessage = Object.values(error.response.data.errors).flat().join('\n');
           }
         }
         commit('SET_REGISTRATION_ERROR', errorMessage);
-        throw error; // Re-throw error for the component if it wants to handle it
+        throw error;
       }
     },
 
-    async signIn({ commit, dispatch }, credentials) {
-      commit('CLEAR_AUTH_ERRORS'); // Clear previous errors
+    async signIn({ commit }, credentials) {
+      commit('CLEAR_AUTH_ERRORS');
 
       try {
-        // Use headers: { skipAuthorization: true } so Axios interceptor doesn't try to add a token
         const response = await axios.post(`${AUTH_API_PREFIX}/login`, credentials, {
           headers: { skipAuthorization: true }
         });
-        // Backend returns a raw JWT token in the response body
-        const token = response.data; // Now it's just a token string
 
-        if (token) {
-          // Set token, but don't get user info yet
-          commit('SET_AUTH_DATA', { token: token, user: null });
-          await dispatch('fetchUserProfile'); // Request user profile after login
+        const token = response.data; // Ожидаем, что бэкенд возвращает ТОЛЬКО строку JWT-токена
+
+        if (typeof token === 'string' && token.length > 0) {
+          // Если бэкенд возвращает только токен, а не объект с данными пользователя,
+          // user будет null. Возможно, вам понадобится другой эндпоинт для получения профиля
+          // или декодирование токена, если он содержит id/email.
+          // Для простоты, пока что user: null, так как он не приходит с логином.
+          commit('SET_AUTH_DATA', { token: token, user: null }); // user: null, так как данные не пришли
           alert('Sign in successful!');
-          router.push('/');
+          router.push('/calendars');
+        } else {
+          // Это случится, если response.data не строка или пустая
+          console.error('Sign In successful but no valid token string received or token is empty.');
+          alert('Sign in successful, but failed to get user token.');
+          router.push('/signin');
         }
       } catch (error) {
         console.error('Sign In failed:', error.response || error);
         let errorMessage = 'Invalid credentials or an unexpected error occurred.';
         if (error.response && error.response.data) {
-          // Assume backend returns an error message
-          errorMessage = error.response.data;
+          errorMessage = error.response.data; // Здесь вы ожидаете, что error.response.data - это строка ошибки
         }
         commit('SET_SIGN_IN_ERROR', errorMessage);
-        throw error; // Re-throw error
-      }
-    },
-
-    // Action to fetch current user information (after login)
-    async fetchUserProfile({ commit, state }) {
-      if (!state.jwtToken) {
-        console.warn("No JWT token available to fetch user profile. User might be logged out or token expired.");
-        // Could also log out here if token is missing, though interceptor should handle 401/403
-        commit('LOGOUT');
-        return;
-      }
-      try {
-        // Assume the endpoint for fetching profile is /auth/profile
-        const response = await axios.get(`${AUTH_API_PREFIX}/profile`);
-        // Update user data in state
-        commit('SET_AUTH_DATA', {
-          token: state.jwtToken, // Token remains the same
-          user: {
-            id: response.data.id,
-            name: response.data.name, // Use 'name' from profile
-            email: response.data.email,
-            role: response.data.role
-          }
-        });
-        console.log('User profile fetched:', response.data);
-      } catch (error) {
-        console.error('Failed to fetch user profile:', error.response || error);
-        // Axios interceptor should already handle 401/403, but as a fallback
-        if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-          commit('LOGOUT');
-          alert('Session expired. Please log in again.');
-          router.push('/signin');
-        }
         throw error;
       }
     },
@@ -193,11 +167,45 @@ const authModule = {
     logout({ commit }) {
       commit('LOGOUT');
       alert('Logged out successfully!');
-      router.push('/'); // Redirect to home or sign-in page
+      router.push('/'); // После выхода можно перенаправить на главную или на страницу входа
     },
 
-    // Removed: Action for handling OAuth2 redirect (from GitHub)
-    // Removed: Action for initiating GitHub OAuth2 authorization
+    // НОВЫЙ ЭКШЕН: для запуска процесса аутентификации через GitHub OAuth2
+    initiateGithubLogin() {
+      // Просто перенаправляем пользователя на URL авторизации GitHub OAuth2
+      window.location.href = OAUTH2_GITHUB_AUTH_URL;
+    },
+
+    // НОВЫЙ ЭКШЕН: для обработки редиректа после успешной аутентификации через OAuth2
+    // Этот экшен будет вызываться из router/index.js после редиректа от GitHub
+    async handleOAuth2Redirect({ commit }, urlParams) {
+      commit('CLEAR_AUTH_ERRORS');
+      try {
+        const token = urlParams.get('token');
+        const id = urlParams.get('id');
+        const name = urlParams.get('username'); // Backend часто возвращает 'username'
+        const email = urlParams.get('email');
+        const role = urlParams.get('role');
+
+        if (token) {
+          // Устанавливаем токен и данные пользователя, полученные из URL
+          commit('SET_AUTH_DATA', {
+            token: token,
+            user: { id, name, email, role: role || 'USER' } // Убедимся, что роль по умолчанию 'USER'
+          });
+          alert('Login via GitHub successful!');
+          router.push('/calendars'); // Перенаправляем на страницу календаря
+        } else {
+          console.error('OAuth2 redirect URL did not contain a token.');
+          alert('GitHub login failed: No token received.');
+          router.push('/signin'); // Если токена нет, что-то пошло не так, перенаправляем на логин
+        }
+      } catch (error) {
+        console.error('Error handling OAuth2 redirect:', error);
+        alert('An error occurred during GitHub login.');
+        router.push('/signin');
+      }
+    },
   },
 };
 

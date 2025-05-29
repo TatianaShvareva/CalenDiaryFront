@@ -10,6 +10,7 @@
               label="Name"
               placeholder="Enter your name"
               :error-messages="errors.name"
+              clearable
             ></v-text-field>
 
             <v-text-field
@@ -18,6 +19,7 @@
               placeholder="Enter your email"
               type="email"
               :error-messages="errors.email"
+              clearable
             ></v-text-field>
 
             <v-text-field
@@ -26,6 +28,7 @@
               placeholder="Enter your password"
               type="password"
               :error-messages="errors.password"
+              clearable
             ></v-text-field>
 
             <v-alert v-if="registrationError" type="error" dense dismissible class="mb-4">
@@ -36,6 +39,11 @@
               Register
             </v-btn>
           </v-form>
+
+          <v-card-actions class="justify-center pt-4">
+            <span class="text-body-2 mr-2">Already registered?</span>
+            <v-btn variant="text" color="primary" to="/signin">Sign In</v-btn>
+          </v-card-actions>
         </v-card>
       </v-col>
     </v-row>
@@ -44,12 +52,12 @@
 
 <script>
 import { mapState } from 'vuex';
-import { VContainer, VRow, VCol, VCard, VCardTitle, VForm, VTextField, VBtn, VAlert } from 'vuetify/components';
+import { VContainer, VRow, VCol, VCard, VCardTitle, VForm, VTextField, VBtn, VAlert, VCardActions } from 'vuetify/components';
 
 export default {
-  name: 'registrationView',
+  name: 'RegistrationView', // Переименовал на RegistrationView для консистентности
   components: {
-    VContainer, VRow, VCol, VCard, VCardTitle, VForm, VTextField, VBtn, VAlert,
+    VContainer, VRow, VCol, VCard, VCardTitle, VForm, VTextField, VBtn, VAlert, VCardActions, // Добавил VCardActions
   },
   data() {
     return {
@@ -78,7 +86,7 @@ export default {
       if (!this.data.name) {
         this.errors.name = 'Name is required.';
         valid = false;
-      } else if (this.data.name.length < 2) { // Changed min length based on common practices
+      } else if (this.data.name.length < 2) {
         this.errors.name = 'Name must be at least 2 characters.';
         valid = false;
       } else if (this.data.name.length > 50) {
@@ -105,22 +113,21 @@ export default {
     },
 
     async registerUser() {
-      // Clear previous backend errors
       this.$store.commit('auth/CLEAR_AUTH_ERRORS');
       if (this.validateForm()) {
         try {
-          // Dispatch the user registration action from Vuex store
           await this.$store.dispatch('auth/insertUser', this.data);
-          // Redirection typically happens inside the Vuex action upon success
+          // После успешной регистрации (которая, как мы помним, логинит пользователя),
+          // перенаправление на '/' уже происходит в auth/insertUser action.
+          // Если бы не логинил, то здесь можно было бы добавить this.$router.push('/signin');
         } catch (error) {
-          // Errors are already handled in Vuex and stored in `registrationError`
           console.log('Registration dispatch failed in component (expected for invalid data or backend issues).');
+          // Ошибка уже установлена в registrationError через Vuex
         }
       }
     },
   },
   mounted() {
-    // Clear errors when the component is mounted for a clean state
     this.$store.commit('auth/CLEAR_AUTH_ERRORS');
   },
 };

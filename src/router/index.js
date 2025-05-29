@@ -36,23 +36,23 @@ const routes = [
     props: true
   },
   {
-    // Маршрут для обработки OAuth2 редиректа от бэкенда
-    // Бэкенд перенаправляет сюда с токеном, id, username, email, role в параметрах URL
-    path: '/oauth2/redirect',
-    name: 'oauth2Redirect',
+    path: '/oauth-success', // <--- ИЗМЕНИТЕ ЗДЕСЬ!
+    name: 'oauth2Redirect', // Имя маршрута можно оставить прежним или поменять
     beforeEnter: (to, from, next) => {
-      const urlParams = new URLSearchParams(to.fullPath.split('?')[1]); // Получаем параметры из URL
-      // Проверяем, есть ли токен в URL. Если есть, передаем его в auth модуль
-      if (urlParams.has('token')) {
-        store.dispatch('auth/handleOAuth2Redirect', urlParams);
-        next('/'); // Перенаправляем на главную после обработки
-      } else {
-        console.error('OAuth2 redirect URL did not contain a token.');
-        next('/signin'); // Если токена нет, что-то пошло не так, перенаправляем на логин
-      }
+      const urlParams = new URLSearchParams(window.location.search);
+      store.dispatch('auth/handleOAuth2Redirect', urlParams)
+        .then(() => {
+          // Если handleOAuth2Redirect уже делает router.push('/calendars'), то здесь ничего не нужно
+        })
+        .catch(() => {
+          next('/signin');
+        });
     },
+    component: { template: '<div></div>' },
+    meta: { requiresAuth: false }
   },
 ];
+
 
 const router = createRouter({
   history: createWebHistory(process.env.BASE_URL),
@@ -61,16 +61,9 @@ const router = createRouter({
 
 // Глобальный навигационный хук для защиты маршрутов
 router.beforeEach(async (to, from, next) => {
-  // Перед каждым маршрутом пытаемся получить профиль пользователя, если токен есть, но профиля нет
-  // Это полезно при перезагрузке страницы
-  if (store.getters['auth/jwtToken'] && !store.getters['auth/user'].id) {
-    try {
-      await store.dispatch('auth/fetchUserProfile');
-    } catch (error) {
-      console.warn("Failed to re-fetch user profile on navigation, likely due to expired token.");
-      // Если профиль не удалось получить, токен недействителен, интерсептор уже разлогинит
-    }
-  }
+  // Логика fetchUserProfile здесь отсутствует, так как вы решили ее удалить.
+  // Это означает, что user.id и другие user-данные должны быть установлены
+  // непосредственно в SET_AUTH_DATA при обычном логине и GitHub OAuth2.
 
   // Защита маршрутов
   if (to.matched.some(record => record.meta.requiresAuth)) {

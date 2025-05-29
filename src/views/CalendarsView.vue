@@ -1,42 +1,58 @@
 <template>
-  <div>
-    <v-sheet class="d-flex" height="54" tile>
+  <v-container fluid class="pa-0">
+    <v-toolbar :color="calendiaryPrimary" flat dark>
+      <v-toolbar-title class="ml-4 text-h5">CalenDiary</v-toolbar-title>
+      <v-spacer></v-spacer>
+
+      <v-btn icon @click="goToPrev" aria-label="Previous month/week/day">
+        <v-icon>mdi-chevron-left</v-icon>
+      </v-btn>
+      <v-btn icon @click="goToNext" aria-label="Next month/week/day">
+        <v-icon>mdi-chevron-right</v-icon>
+      </v-btn>
+      <v-btn @click="goToToday" variant="tonal" class="mx-2">Today</v-btn>
+
+      <span class="text-h6 mx-4">{{ calendarTitle }}</span>
+
+      <v-spacer></v-spacer>
+
       <v-select
         v-model="currentView"
         :items="calendarViews"
         class="ma-2"
         density="compact"
         label="View"
-        variant="outlined"
+        variant="solo"
         hide-details
+        flat
+        style="max-width: 150px;"
       ></v-select>
-    </v-sheet>
-    <v-sheet class="pa-4">
+    </v-toolbar>
+
+    <v-sheet class="pa-4 full-calendar-wrapper">
       <FullCalendar :options="calendarOptions" ref="fullCalendarRef" />
     </v-sheet>
-  </div>
+  </v-container>
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from 'vue'; // Added onMounted
+import { ref, watch, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import FullCalendar from '@fullcalendar/vue3';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
-import interactionPlugin from '@fullcalendar/interaction'; // Needed for dateClick, selectable, editable
+import interactionPlugin from '@fullcalendar/interaction';
 import listPlugin from '@fullcalendar/list';
-import enLocale from '@fullcalendar/core/locales/en-gb.js'; // English (Great Britain) locale
+import enLocale from '@fullcalendar/core/locales/en-gb.js';
 
-// CSS imports for FullCalendar (ensure these are correctly pathed or handled by your build system)
-// Depending on your setup, you might have these globally or need to import them here.
-// import '@fullcalendar/core/main.css'; // Example
-// import '@fullcalendar/daygrid/main.css'; // Example
-// For now, assuming your project handles CSS loading as per your original setup.
+// FullCalendar v6.x.x styles are bundled with the JavaScript.
+// No explicit CSS imports are needed here.
 
 const router = useRouter();
-const fullCalendarRef = ref(null); // Template ref to access FullCalendar component API
+const fullCalendarRef = ref(null);
+const calendarTitle = ref('');
 
-const currentView = ref('dayGridMonth'); // Default calendar view
+const currentView = ref('dayGridMonth');
 const calendarViews = ref([
   { title: 'Month', value: 'dayGridMonth' },
   { title: 'Week', value: 'timeGridWeek' },
@@ -44,175 +60,219 @@ const calendarViews = ref([
   { title: 'List', value: 'listWeek' },
 ]);
 
-// --- LocalStorage Event Management ---
-const LOCAL_STORAGE_EVENTS_KEY = 'calendiary-events'; // Key for storing events in localStorage
+const LOCAL_STORAGE_EVENTS_KEY = 'calendiary-events';
 
-// Function to get initial/default events if localStorage is empty or data is corrupted
 const getInitialDefaultEvents = () => {
-  // These are example events if nothing is found in localStorage.
-  // You can change this to return an empty array [] if you prefer to start with no default events.
   return [
     { id: 'default1', title: 'Default Sample Meeting', start: '2025-05-28T10:30:00', end: '2025-05-28T12:30:00' },
-    { id: 'default2', title: 'Default Birthday Party', date: '2025-06-05' }, // An all-day event
+    { id: 'default2', title: 'Default Birthday Party', date: '2025-06-05' },
   ];
 };
 
-// Function to load events from localStorage
 const loadEventsFromLocalStorage = () => {
   const savedEventsJson = localStorage.getItem(LOCAL_STORAGE_EVENTS_KEY);
   if (savedEventsJson) {
     try {
       const parsedEvents = JSON.parse(savedEventsJson);
-      // Basic validation: ensure it's an array before returning
       return Array.isArray(parsedEvents) ? parsedEvents : getInitialDefaultEvents();
     } catch (error) {
       console.error('Error parsing events from localStorage:', error);
-      // Fallback to default events if parsing fails
       return getInitialDefaultEvents();
     }
   }
-  // If no events are found in localStorage, return the default set
   return getInitialDefaultEvents();
 };
 
-// Reactive reference holding the array of events
 const localEvents = ref(loadEventsFromLocalStorage());
 
-// Reactive FullCalendar options
+// Assuming you have setup Vuetify theme to use these color names
+// If not, you might need to use the hex code directly here: '#80CBC4'
+const calendiaryPrimary = computed(() => 'calendiary-primary'); // This will still rely on Vuetify's theme mapping
+
 const calendarOptions = ref({
   plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin],
   initialView: currentView.value,
   locale: enLocale,
-  headerToolbar: {
-    left: 'prev,next today',
-    center: 'title',
-    right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek',
+  headerToolbar: false,
+  datesSet: () => {
+    const calendarApi = fullCalendarRef.value?.getApi();
+    if (calendarApi) {
+      calendarTitle.value = calendarApi.getCurrentData().viewTitle;
+    }
   },
-  editable: true,     // IMPORTANT: Allows events to be dragged and resized.
-                      // This will trigger eventChange callback.
-  selectable: true,   // Allows date/time selection by clicking and dragging.
-  dateClick: handleDateClick, // Handles clicks on a date cell.
-  events: localEvents.value,  // Sets the initial event source. This will be kept in sync by the watcher.
-
-  // Callbacks for event mutations done via the FullCalendar UI
-  eventChange: (changeInfo) => { // Called when an event is dragged, resized, or mutated.
+  editable: true,
+  selectable: true,
+  dateClick: handleDateClick,
+  events: localEvents.value,
+  eventChange: (changeInfo) => {
     console.log('Event changed (UI):', changeInfo.event.title);
     const eventIndex = localEvents.value.findIndex(e => e.id === changeInfo.event.id);
     if (eventIndex !== -1) {
-      // Update the event in our localEvents array.
-      // FullCalendar event objects (changeInfo.event) have properties like startStr, endStr, allDay.
-      // Map these back to your event object structure.
       localEvents.value.splice(eventIndex, 1, {
         id: changeInfo.event.id,
         title: changeInfo.event.title,
         start: changeInfo.event.startStr,
         end: changeInfo.event.endStr,
         allDay: changeInfo.event.allDay,
-        // Include any other custom properties your events have
       });
-      // The watch on localEvents will handle saving to localStorage.
     }
   },
-  // Add eventRemove if you allow deletion directly from the calendar UI (e.g., via eventContent or some other mechanism)
-  // eventRemove: (removeInfo) => { ... }
+  eventColor: '#80CBC4',
+  eventTextColor: '#FFFFFF',
+  dayHeaders: true,
+  slotMinTime: '08:00:00',
+  slotMaxTime: '22:00:00',
+  nowIndicator: true,
 });
 
-// Watch for changes in the 'currentView' (Month, Week, Day selection)
 watch(currentView, (newViewValue) => {
-  // Use FullCalendar's API to change the view
   const calendarApi = fullCalendarRef.value?.getApi();
   if (calendarApi) {
     calendarApi.changeView(newViewValue);
-  } else {
-    // Fallback if API is not ready (e.g., on initial load before mount), though less common for view changes.
-    calendarOptions.value.initialView = newViewValue;
   }
 });
 
-// Watch for changes in 'localEvents' array (e.g., new event added, event updated)
 watch(localEvents, (newEventsValue) => {
-  // Save the updated events array to localStorage
   localStorage.setItem(LOCAL_STORAGE_EVENTS_KEY, JSON.stringify(newEventsValue));
-
-  // Ensure FullCalendar's internal events are updated.
-  // While assigning localEvents.value to calendarOptions.events initially links them,
-  // explicitly updating can be safer depending on FullCalendar's reactivity details.
-  if (calendarOptions.value.events !== newEventsValue) {
-     calendarOptions.value.events = newEventsValue;
+  const calendarApi = fullCalendarRef.value?.getApi();
+  if (calendarApi) {
+    calendarApi.refetchEvents();
   }
-}, { deep: true }); // 'deep: true' is crucial for watching changes within an array or objects inside it.
+}, { deep: true });
 
-// Handler for when a date on the calendar is clicked
 function handleDateClick(clickInfo) {
   const formattedDate = formatDateForRoute(clickInfo.date);
   router.push(`/add-event/${formattedDate}`);
-  // After navigating to '/add-event/...', that view/component will be responsible
-  // for creating the event details. Once created, it needs to communicate
-  // the new event back to this CalendarsView (e.g., via Pinia state management or an event bus)
-  // which would then update the `localEvents` ref.
 }
 
-// Utility function to format a Date object into 'YYYY-MM-DD' string
 const formatDateForRoute = (date) => {
   const year = date.getFullYear();
-  const month = (date.getMonth() + 1).toString().padStart(2, '0'); // JavaScript months are 0-indexed.
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
   const day = date.getDate().toString().padStart(2, '0');
   return `${year}-${month}-${day}`;
 };
 
-// --- How new events are added (conceptual) ---
-// The actual addition of a new event will likely happen in your AddEventView.
-// That view, upon saving an event, should trigger an update to `localEvents`.
-// Example (this function would be part of a shared store like Pinia, or callable via event bus):
-/*
-function externallyAddNewEvent(eventData) {
-  const newEvent = {
-    id: Date.now().toString(), // Generate a simple unique ID
-    title: eventData.title,
-    start: eventData.start,
-    end: eventData.end,
-    allDay: eventData.allDay || false,
-    // ... any other properties
-  };
-  localEvents.value.push(newEvent); // This will trigger the watcher to save to localStorage
-}
-*/
+const goToPrev = () => {
+  fullCalendarRef.value?.getApi().prev();
+};
 
-// onMounted hook (called after the component is mounted)
+const goToNext = () => {
+  fullCalendarRef.value?.getApi().next();
+};
+
+const goToToday = () => {
+  fullCalendarRef.value?.getApi().today();
+};
+
 onMounted(() => {
-  // You can perform actions here once the calendar is potentially rendered.
-  // For instance, if you needed to interact with the calendar's API on load.
-  // console.log('CalendarsView component mounted. FullCalendar ref:', fullCalendarRef.value);
+  const calendarApi = fullCalendarRef.value?.getApi();
+  if (calendarApi) {
+    calendarTitle.value = calendarApi.getCurrentData().viewTitle;
+  }
 });
-
 </script>
 
-<style scoped>
-/* Styles from your original code */
-.fc-daygrid-day-frame {
-  /* Container for day number and events */
-  padding: 0.5em;
-  /* Reduce padding */
+<style lang="scss" scoped>
+/* No @use statement needed here */
+
+.full-calendar-wrapper {
+  background-color: #FFFFFF; /* was vars.$calendiary-surface */
+  border-radius: var(--border-radius-base);
+  box-shadow: var(--box-shadow-light);
+  padding: 0px !important;
+  margin: calc(var(--spacing-unit) * 2);
 }
 
-.fc-daygrid-day-top {
-  /* Top part of the cell with the day number */
-  min-height: 1.5em;
-  /* Reduce minimum height */
+.fc .fc-view-harness {
+  height: calc(100vh - 64px - (var(--spacing-unit) * 4)) !important;
 }
 
-.fc-daygrid-event {
-  /* Style for events */
-  font-size: 0.8em;
-  /* Reduce event font size */
-  padding: 0.2em;
-  /* Reduce event padding */
-  margin-bottom: 0.1em;
-  /* Reduce margin between events */
+.fc .fc-daygrid-day-frame {
+  border-radius: calc(var(--border-radius-base) / 2);
+  transition: background-color 0.2s ease;
 }
 
-/* Vuetify specific class for margin, ensure it's styled as intended or override if needed */
-.ma-2 {
-  min-width: 150px; /* Example to ensure select has some width */
+.fc .fc-daygrid-day-frame:hover {
+  /*
+    Original was: background-color: color.adjust(vars.$calendiary-background, $lightness: 5%) !important;
+    $calendiary-background: #F8F8F8;
+    Lighten #F8F8F8 by 5% is roughly #FFFFFF (or very close, depending on exact Sass implementation).
+    Using a hardcoded color that is 5% lighter than #F8F8F8.
+  */
+  background-color: #FFFFFF !important; /* Approximation of lighten($calendiary-background, 5%) */
+}
+
+.fc .fc-day-today {
+  /*
+    Original was: background-color: color.adjust(vars.$calendiary-tertiary, $lightness: 15%) !important;
+    $calendiary-tertiary: #90CAF9;
+    Lighten #90CAF9 by 15% is roughly #B2E5FC.
+  */
+  background-color: #B2E5FC !important; /* Approximation of lighten($calendiary-tertiary, 15%) */
+  border: 1px solid #90CAF9 !important; /* was vars.$calendiary-tertiary */
+  border-radius: calc(var(--border-radius-base) / 2);
+}
+
+.fc-event {
+  border-radius: calc(var(--border-radius-base) / 2) !important;
+  font-weight: 500 !important;
+  border: none !important;
+  background-color: #80CBC4 !important; /* was vars.$calendiary-primary */
+  color: #FFFFFF !important; /* was vars.$calendiary-text-light */
+}
+
+.fc .fc-toolbar-title {
+  font-size: 1.8rem;
+  font-weight: 500;
+  color: #424242; /* was vars.$calendiary-text-dark */
+}
+
+.fc .fc-col-header-cell-cushion {
+  text-transform: uppercase;
+  font-weight: 500;
+  color: #424242; /* was vars.$calendiary-text-dark */
+}
+
+.fc-day-selected {
+  /* Original was: rgba(vars.$calendiary-primary, 0.1) */
+  background-color: rgba(128, 203, 196, 0.1) !important; /* rgba(80CBC4, 0.1) */
+  border: 1px solid #80CBC4 !important; /* was vars.$calendiary-primary */
+}
+
+.fc .fc-timegrid-slot {
+  height: 2.5em;
+}
+
+.fc .fc-timegrid-slot-label {
+  padding-right: calc(var(--spacing-unit) / 2);
+  color: #424242; /* was vars.$calendiary-text-dark */
+}
+
+.fc-daygrid-event-harness {
+  margin-bottom: calc(var(--spacing-unit) / 4);
+}
+
+.fc-h-event .fc-event-main {
+  padding: calc(var(--spacing-unit) / 4) calc(var(--spacing-unit) / 2);
+}
+
+.fc .fc-icon {
+  font-size: 1.2em;
+}
+
+.v-input--density-compact .v-field--variant-solo {
+  /* Original was: rgba(vars.$calendiary-text-light, 0.2) */
+  background-color: rgba(255, 255, 255, 0.2) !important; /* rgba(FFFFFF, 0.2) */
+  color: #FFFFFF !important; /* was vars.$calendiary-text-light */
+}
+.v-input--density-compact .v-field__input {
+  color: #FFFFFF !important; /* was vars.$calendiary-text-light */
+}
+.v-input--density-compact .v-field__label {
+  /* Original was: rgba(vars.$calendiary-text-light, 0.7) */
+  color: rgba(255, 255, 255, 0.7) !important; /* rgba(FFFFFF, 0.7) */
+}
+.v-input--density-compact .v-icon {
+  color: #FFFFFF !important; /* was vars.$calendiary-text-light */
 }
 </style>

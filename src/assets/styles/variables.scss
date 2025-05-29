@@ -1,0 +1,68 @@
+// src/assets/styles/variables.scss
+
+// Ваши основные цвета
+$calendiary-primary: #80CBC4;   // Мягкий мятный (бирюзовый)
+$calendiary-secondary: #FFAB91; // Светлый лососевый/коралловый
+$calendiary-tertiary: #90CAF9;   // Светлый небесно-голубой
+$calendiary-background: #F8F8F8; // Очень светлый серый/белый фон
+$calendiary-surface: #FFFFFF;    // Цвет поверхностей (карточек, диалогов)
+$calendiary-text-dark: #424242; // Мягкий темно-серый для основного текста
+$calendiary-text-light: #FFFFFF; // Белый для текста на темном фоне
+$calendiary-border: #E0E0E0;    // Легкий серый для границ
+
+// Глобальные переменные для всего приложения
+:root {
+  --font-family-base: 'Roboto', sans-serif;
+  --spacing-unit: 8px; // Базовый отступ
+  --border-radius-base: 8px; // Чуть более мягкие углы для пастельного стиля
+  --box-shadow-light: 0 2px 4px rgba(0,0,0,0.08); // Легкая тень
+}
+
+// Базовые стили для body, если они еще не в App.vue
+body {
+  font-family: var(--font-family-base);
+  color: $calendiary-text-dark;
+  background-color: $calendiary-background;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased; // Улучшает сглаживание шрифтов
+  -moz-osx-font-smoothing: grayscale;
+}
+
+// Сброс и базовые стили
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+a {
+  color: $calendiary-primary;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+// Глобальные стили для заголовков (можно использовать классы Vuetify display-...)
+h1, h2, h3, h4, h5, h6 {
+  color: $calendiary-text-dark;
+  font-weight: 500; // Roboto Medium
+}
+
+h1 { font-size: 2.8rem; }
+h2 { font-size: 2.2rem; }
+h3 { font-size: 1.8rem; }
+
+// Медиа-запросы для уменьшения размеров шрифта на маленьких экранах
+@media (max-width: 600px) {
+  h1 { font-size: 2rem; }
+  h2 { font-size: 1.7rem; }
+  h3 { font-size: 1.4rem; }
+}
+
+// Вспомогательные классы (если нужны)
+.text-primary { color: $calendiary-primary !important; }
+.text-secondary { color: $calendiary-secondary !important; }
+.bg-primary { background-color: $calendiary-primary !important; }
+.bg-secondary { background-color: $calendiary-secondary !important; }
