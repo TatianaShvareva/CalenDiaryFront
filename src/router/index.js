@@ -1,4 +1,4 @@
-import { createRouter, createWebHashHistory } from 'vue-router';
+import { createRouter, createWebHistory } from 'vue-router'; // <--- Изменено на createWebHistory
 import HomeView from '@/views/HomeView.vue';
 import Registration from '@/views/login/Registration.vue';
 import SignIn from '@/views/login/SignIn.vue';
@@ -27,15 +27,15 @@ const routes = [
     component: CalendarsView
   },
   {
-    path: '/add-event/:date', // <--- Добавьте этот маршрут
-    name: 'add-event',
-    component: AddEditEventView
+    path: '/add-event/:date?', 
+    name: 'add-edit-event', 
+    component: AddEditEventView,
+    props: true 
   }
-  // ... другие ваши маршруты (если есть)
 ];
 
 const router = createRouter({
-  history: createWebHashHistory(),
+  history: createWebHistory(process.env.BASE_URL),
   routes
 });
 

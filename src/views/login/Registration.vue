@@ -126,7 +126,7 @@ export default {
       }
     },
   },
-  mounted() { // <-- Хук mounted должен быть здесь, на том же уровне, что и data, computed, methods
+  mounted() { 
     console.log('RegistrationView mounted', this.$store);
   },
 };

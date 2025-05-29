@@ -1,19 +1,19 @@
 <template>
-  <div class="home">
-    <WelcomePage />
+  <div class="home-view">
+    <HomePageContent />
   </div>
 </template>
 
 <script setup>
-import WelcomePage from '@/components/WelcomePage.vue';
+import HomePageContent from '@/components/HomePageContent.vue';
 </script>
 
 <style scoped>
-.home {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  background-color: #f5f5f5;
+.home-view {
+  /* display: flex; */
+  /* justify-content: center; */
+  /* align-items: center; */
+  /* min-height: 100vh; */
+  /* background-color: #f5f5f5; */
 }
 </style>
