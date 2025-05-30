@@ -1,4 +1,5 @@
 // C:\Users\human\.vscode\CalenDiaryFront\calendiary-frontend\src\router\index.js
+
 import { createRouter, createWebHistory } from 'vue-router';
 import HomeView from '@/views/HomeView.vue';
 import Registration from '@/views/login/Registration.vue';
@@ -6,6 +7,12 @@ import SignIn from '@/views/login/SignIn.vue';
 import CalendarsView from '@/views/CalendarsView.vue';
 import AddEditEventView from '@/views/CalendarEvents/AddEditEventView.vue'; // <-- Убедитесь, что это правильный путь
 import store from '@/store/store';
+
+// НОВЫЕ ИМПОРТЫ для страниц информации
+import PrivacyPolicyView from '@/views/Information/PrivacyPolicyView.vue';
+import FAQView from '@/views/Information/FAQView.vue';
+import AboutView from '@/views/Information/AboutView.vue';
+import ContactUsView from '@/views/Information/ContactUsView.vue';
 
 const routes = [
   {
@@ -53,6 +60,7 @@ const routes = [
       store.dispatch('auth/handleOAuth2Redirect', urlParams)
         .then(() => {
           // Если handleOAuth2Redirect уже делает router.push('/calendars'), то здесь ничего не нужно
+          // В противном случае, добавьте: next('/calendars');
         })
         .catch(() => {
           next('/signin');
@@ -60,6 +68,32 @@ const routes = [
     },
     component: { template: '<div></div>' },
     meta: { requiresAuth: false }
+  },
+
+  // НОВЫЕ МАРШРУТЫ ДЛЯ ИНФОРМАЦИИ - ДОБАВЛЯЕМ СЮДА
+  {
+    path: '/privacy',
+    name: 'privacy',
+    component: PrivacyPolicyView,
+    meta: { requiresAuth: false } // Эти страницы, скорее всего, не требуют аутентификации
+  },
+  {
+    path: '/faq',
+    name: 'faq',
+    component: FAQView,
+    meta: { requiresAuth: false } // Эти страницы, скорее всего, не требуют аутентификации
+  },
+  {
+    path: '/about',
+    name: 'about',
+    component: AboutView,
+    meta: { requiresAuth: false } // Эти страницы, скорее всего, не требуют аутентификации
+  },
+  {
+    path: '/contact-us', // Путь, по которому будет доступна страница
+    name: 'contact-us', // Уникальное имя маршрута
+    component: ContactUsView, // Вот здесь мы используем импортированный компонент!
+    meta: { requiresAuth: false } // Эта страница, скорее всего, не требует аутентификации
   },
 ];
 

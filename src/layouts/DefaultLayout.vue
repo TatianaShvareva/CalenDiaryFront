@@ -35,7 +35,9 @@
     <v-navigation-drawer
       v-model="drawer"
       app
-      temporary         location="left"  >
+      temporary
+      location="left"
+    >
       <v-list nav dense>
         <v-list-item to="/" link>
           <template v-slot:prepend><v-icon>mdi-home</v-icon></template>
@@ -123,6 +125,89 @@
         </v-row>
       </v-container>
     </v-footer>
+
+    <v-dialog v-model="guidedTourDialog" max-width="600">
+      <v-card>
+        <v-card-title class="headline">Start Guided Tour</v-card-title>
+        <v-card-text>
+          <p>Welcome to the Guided Tour! This feature will walk you through the main functionalities of our calendar application.</p>
+          <p>Steps:</p>
+          <ol>
+            <li><strong>Calendar Overview:</strong> Understand the main calendar view.</li>
+            <li><strong>Adding Events:</strong> Learn how to quickly add new events.</li>
+            <li><strong>Editing & Deleting:</strong> Manage your existing events.</li>
+            <li><strong>Navigation:</strong> Explore different views and settings.</li>
+          </ol>
+          <p class="mt-4">Are you ready to start your journey?</p>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="primary" text @click="guidedTourDialog = false">Not Now</v-btn>
+          <v-btn color="primary" @click="startTourConfirmed">Start Tour</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <v-dialog v-model="tipOfTheDayDialog" max-width="400">
+      <v-card>
+        <v-card-title class="headline">Tip of the Day</v-card-title>
+        <v-card-text>
+          <p><strong>Did you know?</strong></p>
+          <p>You can quickly add an event by simply clicking on any empty spot on the calendar grid!</p>
+          <p class="mt-4 text-center text-caption text-medium-emphasis">New tip every day!</p>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="primary" text @click="tipOfTheDayDialog = false">Got It!</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <v-dialog v-model="newFeaturesDialog" max-width="700">
+      <v-card>
+        <v-card-title class="headline">What's New in Version 1.1?</v-card-title>
+        <v-card-text>
+          <p class="mb-2">We're excited to announce the latest updates to your calendar app!</p>
+          <v-timeline density="compact" align="start">
+            <v-timeline-item dot-color="primary" size="x-small">
+              <div class="d-flex justify-space-between flex-grow-1">
+                <div>
+                  <strong>Enhanced Date & Time Picker</strong>
+                  <div class="text-caption">More intuitive selection for event scheduling.</div>
+                </div>
+                <div class="text-caption text-medium-emphasis">May 2025</div>
+              </div>
+            </v-timeline-item>
+
+            <v-timeline-item dot-color="success" size="x-small">
+              <div class="d-flex justify-space-between flex-grow-1">
+                <div>
+                  <strong>Improved Performance</strong>
+                  <div class="text-caption">Faster loading and smoother interactions.</div>
+                </div>
+                <div class="text-caption text-medium-emphasis">April 2025</div>
+              </div>
+            </v-timeline-item>
+
+            <v-timeline-item dot-color="info" size="x-small">
+              <div class="d-flex justify-space-between flex-grow-1">
+                <div>
+                  <strong>New FAQ Section</strong>
+                  <div class="text-caption">Quick answers to common questions.</div>
+                </div>
+                <div class="text-caption text-medium-emphasis">March 2025</div>
+              </div>
+            </v-timeline-item>
+          </v-timeline>
+          <p class="mt-4">Stay tuned for more exciting updates!</p>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="primary" text @click="newFeaturesDialog = false">Close</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
   </v-app>
 </template>
 
@@ -130,30 +215,46 @@
 import { ref, computed } from 'vue';
 import { useStore } from 'vuex';
 import appLogo from '@/assets/app_logo.png';
+import { useRouter } from 'vue-router'; // Импортируем useRouter
 
 const drawer = ref(false);
 const store = useStore();
+const router = useRouter(); // Инициализация роутера
 
 const authenticated = computed(() => store.getters['auth/authenticated']);
 
+// Рефы для управления видимостью диалогов
+const guidedTourDialog = ref(false);
+const tipOfTheDayDialog = ref(false);
+const newFeaturesDialog = ref(false);
+
 const startGuidedTour = () => {
-  alert('Starting guided tour!');
-  drawer.value = false;
+  guidedTourDialog.value = true;
+  drawer.value = false; // Закрываем навигационное меню при открытии диалога
+};
+
+const startTourConfirmed = () => {
+  guidedTourDialog.value = false;
+  // Здесь могла бы быть более сложная логика начала тура
+  // Например, router.push('/a-special-tour-page');
+  // Для простоты, пока просто оповещение
+  alert('Guided Tour functionality is under development!');
 };
 
 const showTipOfTheDay = () => {
-  alert('Tip of the Day: "Break big tasks into smaller, manageable steps to avoid overwhelm."');
-  drawer.value = false;
+  tipOfTheDayDialog.value = true;
+  drawer.value = false; // Закрываем навигационное меню
 };
 
 const showNewFeatures = () => {
-  alert('New Features: Dark Mode (coming soon!), Custom Categories for Events (beta).');
-  drawer.value = false;
+  newFeaturesDialog.value = true;
+  drawer.value = false; // Закрываем навигационное меню
 };
 
 const handleLogout = () => {
   store.dispatch('auth/logout');
   drawer.value = false;
+  router.push('/signin'); // Перенаправляем на страницу входа после выхода
 };
 </script>
 
@@ -161,8 +262,8 @@ const handleLogout = () => {
 .main-content-area {
   background-color: transparent;
   padding-top: 64px; /* Учитываем высоту app-bar */
-  padding-bottom: 64px; /* Учитываем высоту footer */
-  min-height: calc(100vh - 128px); /* Занимаем оставшееся пространство */
+  padding-bottom: 120px; /* Учитываем высоту footer */
+  min-height: calc(100vh - (64px + 120px)); /* Занимаем оставшееся пространство */
   display: flex;
   justify-content: center;
   align-items: flex-start;
