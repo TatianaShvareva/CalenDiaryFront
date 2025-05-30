@@ -76,8 +76,7 @@ CalenDiary is a modern and intuitive web application designed to help you organi
     ```bash
     docker-compose up --build -d # -d runs in detached mode (in the background)
     ```
-    * The `auth-api` service will typically be accessible on `http://localhost:8081` (or whatever port is configured in its `application.properties`/`docker-compose.yml`). Adjust `VUE_APP_AUTH_API_BASE_URL` in your frontend `.env` file accordingly.
-    * _Note: Verify auth-api's `docker-compose.yml` for its exposed port and database configuration._
+    * The `auth-api` service will typically be accessible on `http://localhost:8001` (or whatever port is configured in its `application.properties`/`docker-compose.yml`). Adjust `VUE_APP_AUTH_API_BASE_URL` in your frontend `.env` file.
 
 3.  **Clone the `calendiary-backend` repository:**
     ```bash
@@ -91,8 +90,7 @@ CalenDiary is a modern and intuitive web application designed to help you organi
     ```bash
     docker-compose up --build -d # -d runs in detached mode
     ```
-    * The `calendiary-backend` service will typically be accessible on `http://localhost:8080` (or whatever port is configured in its `application.properties`/`docker-compose.yml`). Adjust `VUE_APP_API_BASE_URL` in your frontend `.env` file accordingly.
-    * _Note: Your `calendiary-backend`'s `docker-compose.yml` file should be configured to handle database initialization (e.g., via Spring Boot's JPA/Hibernate auto-DDL or Flyway/Liquibase for migrations)._
+    * The `calendiary-backend` service will typically be accessible on `http://localhost:8001` (or whatever port is configured in its `application.properties`/`docker-compose.yml`). Adjust `VUE_APP_API_BASE_URL` in your frontend `.env` file accordingly.
 
 5.  **Verify backend services status:**
     Check your console for logs of both Spring Boot applications to confirm they started successfully and connected to their respective databases.
