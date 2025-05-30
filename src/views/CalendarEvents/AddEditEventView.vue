@@ -8,7 +8,7 @@
       <v-row>
         <v-col cols="12" md="4" class="d-flex align-self-start">
           <CalendarSidebar
-            :initial-date="selectedDate"
+            :initial-date="sidebarInitialDate"
             :on-date-click="handleMiniCalendarDateClick"
             :events="allCalendarEvents"
             class="flex-grow-1"
@@ -85,32 +85,33 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { format } from 'date-fns';
 
+// Import components
 import CalendarSidebar from '@/components/CalendarEvents/CalendarSidebar.vue';
 import TimePicker from '@/components/CalendarEvents/TimePicker.vue';
 import DateAndTimePicker from '@/components/CalendarEvents/DateAndTimePicker.vue';
 import EventTags from '@/components/CalendarEvents/EventTags.vue';
 import MoodOMeter from '@/components/CalendarEvents/MoodOMeter.vue';
 
+// Import service for API calls
 import calendarService from '@/services/calendarService';
-// Removed: import labelService from '@/services/labelService'; // No longer needed if tags are frontend-defined
 
-const route = useRoute();
-const router = useRouter();
+const route = useRoute(); // Access current route
+const router = useRouter(); // Access router for navigation
 
+// Reactive state variables for event form
 const eventId = ref(null);
-const selectedDate = ref(new Date().toISOString().split('T')[0]);
-const fromTime = ref('09:00');
-const untilDateTime = ref('');
+const selectedDate = ref(null); // Initialized in onMounted based on route/current date
+const fromTime = ref('09:00'); // Default start time
+const untilDateTime = ref(''); // Default end date and time
 
 const eventTitle = ref('');
 const location = ref('');
 const description = ref('');
 const selectedTags = ref([]);
-// Changed: availableTags now hardcoded on frontend
 const availableTags = ref([
   'Study',
   'Work',
@@ -123,17 +124,33 @@ const availableTags = ref([
 const mood = ref(null);
 const diaryEntry = ref('');
 
-const allCalendarEvents = ref([]);
+const allCalendarEvents = ref([]); // Stores events fetched for CalendarSidebar
 
+// Computed property to determine if the component is in edit mode
 const isEditMode = computed(() => !!eventId.value);
 
+// Computed property to format the selected date for display in the header
 const formattedSelectedDate = computed(() => {
   if (!selectedDate.value) return '';
   const dateObj = new Date(selectedDate.value);
-  return format(dateObj, 'd MMMM yyyy');
+  return format(dateObj, 'd MMMM'); // e.g., "31 May"
+});
+
+// Computed property to provide the initial date for the CalendarSidebar
+const sidebarInitialDate = computed(() => {
+  const dateFromRoute = route.params.date;
+  if (dateFromRoute) {
+    // Parse the date string from the route into a Date object, ensuring correct timezone handling
+    return new Date(dateFromRoute + 'T00:00:00');
+  }
+  return new Date(); // Fallback to current date if no date in route
 });
 
 
+/**
+ * Initializes the 'from' and 'until' time pickers for a new event.
+ * @param {string} dateString - The date in 'YYYY-MM-DD' format.
+ */
 const initializeTimesForNewEvent = (dateString) => {
   const dateObj = new Date(dateString);
   if (!isNaN(dateObj.getTime())) {
@@ -141,27 +158,32 @@ const initializeTimesForNewEvent = (dateString) => {
     const minute = String(dateObj.getMinutes()).padStart(2, '0');
     fromTime.value = `${hour}:${minute}`;
 
-    // Для нового события, endTime по умолчанию на час позже startTime
-    const initialEndDate = new Date(dateString);
-    initialEndDate.setHours(dateObj.getHours() + 1, dateObj.getMinutes(), 0, 0);
+    // Set end time to 1 hour after start time for new events
+    const initialEndDate = new Date(dateObj.getTime() + 60 * 60 * 1000);
     untilDateTime.value = format(initialEndDate, "yyyy-MM-dd'T'HH:mm");
   } else {
     console.error('Failed to parse date for time pickers:', dateString);
     fromTime.value = '09:00';
-    untilDateTime.value = format(new Date(), "yyyy-MM-dd'T'10:00");
+    // Fallback: Use current date + 1 hour if dateString is invalid
+    untilDateTime.value = format(new Date(new Date().setHours(new Date().getHours() + 1)), "yyyy-MM-dd'T'HH:mm");
   }
 };
 
+/**
+ * Handles date clicks on the mini calendar (CalendarSidebar).
+ * Updates selectedDate and initializes times if it's a new event.
+ * @param {Object} arg - FullCalendar date click argument object.
+ */
 function handleMiniCalendarDateClick(arg) {
-  selectedDate.value = arg.dateStr;
+  selectedDate.value = arg.dateStr; // arg.dateStr is already 'YYYY-MM-DD'
   if (!isEditMode.value) {
-    // Только если это новое событие, инициализируем время
     initializeTimesForNewEvent(arg.dateStr);
   }
-  // В режиме редактирования, untilDateTime.value остается таким, каким его выбрал пользователь
-  // или каким оно было загружено из события.
 }
 
+/**
+ * Fetches all calendar events from the backend to populate the sidebar.
+ */
 const fetchAllEvents = async () => {
   try {
     const events = await calendarService.getAllEvents();
@@ -170,7 +192,7 @@ const fetchAllEvents = async () => {
       title: event.title,
       start: event.startTime,
       end: event.endTime,
-      // You can add more FullCalendar compatible properties here if needed
+      // Map other FullCalendar compatible properties if needed
     }));
     console.log('Fetched and formatted all calendar events for sidebar:', allCalendarEvents.value);
   } catch (error) {
@@ -178,6 +200,10 @@ const fetchAllEvents = async () => {
   }
 };
 
+/**
+ * Loads event data from the backend for editing an existing event.
+ * @param {string} id - The ID of the event to load.
+ */
 const loadEventForEdit = async (id) => {
   try {
     const event = await calendarService.getEventById(id);
@@ -190,14 +216,13 @@ const loadEventForEdit = async (id) => {
 
     if (event.startTime) {
       const startDateTime = new Date(event.startTime);
-      selectedDate.value = format(startDateTime, 'yyyy-MM-dd');
+      selectedDate.value = format(startDateTime, 'yyyy-MM-dd'); // Set the selected date
       fromTime.value = format(startDateTime, 'HH:mm');
     }
-    // **ВАЖНО: Устанавливаем untilDateTime из event.endTime**
     if (event.endTime) {
       untilDateTime.value = format(new Date(event.endTime), "yyyy-MM-dd'T'HH:mm");
     } else {
-      // Fallback: если endTime отсутствует (хотя не должно быть), устанавливаем час позже startTime
+      // Fallback: if endTime is missing, set to 1 hour after startTime
       if (event.startTime) {
         const startDateTime = new Date(event.startTime);
         const endDateTime = new Date(startDateTime.getTime() + 60 * 60 * 1000);
@@ -207,20 +232,24 @@ const loadEventForEdit = async (id) => {
   } catch (error) {
     console.error(`Failed to load event with ID ${id}:`, error.response ? error.response.data : error.message);
     alert(`Failed to load event. Error: ${error.response?.data || error.message}`);
-    router.push('/calendars');
+    router.push('/calendars'); // Redirect if event load fails
   }
 };
 
+/**
+ * Saves or updates an event based on the current mode (create/edit).
+ */
 const saveEvent = async () => {
+  // Combine selected date and time for startTime
   const combinedStartTimeStr = `${selectedDate.value}T${fromTime.value}`;
   const startTime = new Date(combinedStartTimeStr);
-  const endTime = new Date(untilDateTime.value);
+  const endTime = new Date(untilDateTime.value); // untilDateTime.value is already in 'YYYY-MM-DDTHH:mm' format
 
+  // Input validation
   if (isNaN(startTime.getTime()) || isNaN(endTime.getTime())) {
     alert('Invalid date or time. Please check your inputs.');
     return;
   }
-
   if (endTime < startTime) {
     alert('End time cannot be earlier than start time. Please adjust.');
     return;
@@ -231,10 +260,10 @@ const saveEvent = async () => {
   const eventPayload = {
     title: eventTitle.value,
     description: description.value,
-    startTime: format(startTime, "yyyy-MM-dd'T'HH:mm:ss"),
-    endTime: format(endTime, "yyyy-MM-dd'T'HH:mm:ss"),
+    startTime: format(startTime, "yyyy-MM-dd'T'HH:mm:ss"), // ISO 8601 with seconds
+    endTime: format(endTime, "yyyy-MM-dd'T'HH:mm:ss"),   // ISO 8601 with seconds
     location: location.value,
-    labels: selectedTags.value, // This sends the array of selected tags
+    labels: selectedTags.value,
     diaryEntry: diaryEntry.value,
     moodRating: mood.value,
   };
@@ -247,19 +276,22 @@ const saveEvent = async () => {
       await calendarService.createEvent(eventPayload);
       alert('Event created successfully!');
     }
-    router.push('/calendars');
+    router.push('/calendars'); // Redirect to calendars page after successful save
   } catch (error) {
     console.error('Failed to save event:', error.response ? error.response.data : error.message);
     alert(`Failed to save event. Error: ${error.response?.data || error.message}`);
   }
 };
 
+/**
+ * Deletes the current event if in edit mode.
+ */
 const deleteEvent = async () => {
   if (confirm('Are you sure you want to delete this event?')) {
     try {
       await calendarService.deleteEvent(eventId.value);
       alert('Event deleted successfully!');
-      router.push('/calendars');
+      router.push('/calendars'); // Redirect to calendars page after deletion
     } catch (error) {
       console.error('Failed to delete event:', error.response ? error.response.data : error.message);
       alert(`Failed to delete event. Error: ${error.response?.data || error.message}`);
@@ -267,30 +299,50 @@ const deleteEvent = async () => {
   }
 };
 
+/**
+ * Cancels the current operation and navigates back to the calendars page.
+ */
 const cancel = () => {
   router.push('/calendars');
 };
 
+// Lifecycle hook: executed after component is mounted to the DOM
 onMounted(async () => {
-  await fetchAllEvents(); // Это для CalendarSidebar
-
-  if (route.params.id) {
-    eventId.value = route.params.id;
-    await loadEventForEdit(eventId.value); // Загружаем все данные, включая untilDateTime
-  } else if (route.params.date) {
-    selectedDate.value = String(route.params.date);
-    // Для нового события, инициализируем время начала и конца
-    initializeTimesForNewEvent(selectedDate.value);
+  // 1. Initialize selectedDate based on route params or current date
+  if (route.params.date) {
+    selectedDate.value = String(route.params.date); // Set selectedDate from route
     console.log('AddEditEventView: Initial selectedDate from route for creation:', selectedDate.value);
   } else {
-    console.warn('AddEditEventView: No ID or date provided in route params. Using default today.');
-    // Для нового события без даты, инициализируем время на сегодня
+    selectedDate.value = format(new Date(), 'yyyy-MM-dd'); // Default to current date
+    console.warn('AddEditEventView: No date provided in route params. Using default today.');
+  }
+
+  // 2. Fetch all events for the CalendarSidebar
+  await fetchAllEvents();
+
+  // 3. Handle event loading (if in edit mode) or time initialization (if creating new event)
+  if (route.params.id) {
+    eventId.value = route.params.id;
+    await loadEventForEdit(eventId.value); // Load all event data
+  } else {
+    // If not in edit mode (i.e., creating a new event)
     initializeTimesForNewEvent(selectedDate.value);
+  }
+});
+
+// Watcher for selectedDate changes (e.g., when clicking dates in CalendarSidebar)
+watch(selectedDate, (newDate) => {
+  if (newDate) {
+    // No direct action needed here for sidebar, as sidebarInitialDate is computed
+    // and CalendarSidebar's internal watch handles prop changes.
+    // This watcher primarily helps in debugging or if more complex logic is needed
+    // when selectedDate changes from user interaction within this component.
   }
 });
 </script>
 
 <style scoped>
+/* Scoped styles for this component */
 .add-edit-event-view {
   min-height: 100vh;
   background-color: #f5f5f5;
