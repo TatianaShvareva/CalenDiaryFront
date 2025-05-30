@@ -4,8 +4,8 @@ import HomeView from '@/views/HomeView.vue';
 import Registration from '@/views/login/Registration.vue';
 import SignIn from '@/views/login/SignIn.vue';
 import CalendarsView from '@/views/CalendarsView.vue';
-import AddEditEventView from '@/views/CalendarEvents/AddEditEventView.vue';
-import store from '@/store/store'; // Правильный путь к вашему корневому store
+import AddEditEventView from '@/views/CalendarEvents/AddEditEventView.vue'; // <-- Убедитесь, что это правильный путь
+import store from '@/store/store';
 
 const routes = [
   {
@@ -27,17 +27,27 @@ const routes = [
     path: '/calendars',
     name: 'calendars',
     component: CalendarsView,
-    meta: { requiresAuth: true }, // Защищенный маршрут
+    meta: { requiresAuth: true },
   },
   {
-    path: '/add-event/:date?',
-    name: 'add-edit-event',
-    component: AddEditEventView,
-    props: true
+    // Маршрут для ДОБАВЛЕНИЯ события
+    path: '/add-event/:date?', // :date? делает параметр необязательным
+    name: 'add-event',
+    component: AddEditEventView, // <-- Указываем на ваш универсальный компонент
+    props: true, // Передаем параметры маршрута как пропсы компоненту
+    meta: { requiresAuth: true }
   },
   {
-    path: '/oauth-success', // <--- ИЗМЕНИТЕ ЗДЕСЬ!
-    name: 'oauth2Redirect', // Имя маршрута можно оставить прежним или поменять
+    // Маршрут для РЕДАКТИРОВАНИЯ события
+    path: '/edit-event/:id', // <-- НОВЫЙ МАРШРУТ для редактирования
+    name: 'edit-event',
+    component: AddEditEventView, // <-- ТОЖЕ Указываем на ваш универсальный компонент
+    props: true, // Передаем ID как пропс (или можно получить через useRoute().params.id)
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/oauth-success',
+    name: 'oauth2Redirect',
     beforeEnter: (to, from, next) => {
       const urlParams = new URLSearchParams(window.location.search);
       store.dispatch('auth/handleOAuth2Redirect', urlParams)
@@ -59,21 +69,15 @@ const router = createRouter({
   routes
 });
 
-// Глобальный навигационный хук для защиты маршрутов
 router.beforeEach(async (to, from, next) => {
-  // Логика fetchUserProfile здесь отсутствует, так как вы решили ее удалить.
-  // Это означает, что user.id и другие user-данные должны быть установлены
-  // непосредственно в SET_AUTH_DATA при обычном логине и GitHub OAuth2.
-
-  // Защита маршрутов
   if (to.matched.some(record => record.meta.requiresAuth)) {
     if (!store.getters['auth/authenticated']) {
-      next({ name: 'signin' }); // Перенаправляем на логин, если не аутентифицирован
+      next({ name: 'signin' });
     } else {
-      next(); // Все хорошо, разрешаем переход
+      next();
     }
   } else {
-    next(); // Разрешаем переход на незащищенные маршруты
+    next();
   }
 });
 

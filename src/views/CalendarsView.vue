@@ -36,7 +36,6 @@ import interactionPlugin from '@fullcalendar/interaction';
 import listPlugin from '@fullcalendar/list';
 import enLocale from '@fullcalendar/core/locales/en-gb.js';
 
-// Импортируем наш calendarService
 import calendarService from '@/services/calendarService';
 
 const router = useRouter();
@@ -51,39 +50,54 @@ const calendarViews = ref([
   { title: 'List', value: 'listWeek' },
 ]);
 
-// Удаляем все, что связано с LOCAL_STORAGE_EVENTS_KEY, getInitialDefaultEvents, loadEventsFromLocalStorage, localEvents
-// const LOCAL_STORAGE_EVENTS_KEY = 'calendiary-events';
-// const getInitialDefaultEvents = () => { /* ... */ };
-// const loadEventsFromLocalStorage = () => { /* ... */ };
-// const localEvents = ref(loadEventsFromLocalStorage());
-
-// Новая реактивная переменная для хранения событий, загруженных с бэкенда
 const events = ref([]);
-
 const calendiaryPrimary = computed(() => 'calendiary-primary');
 
-// Функция для загрузки событий с бэкенда
+// ====================================================================
+// ПЕРЕМЕСТИТЕ ФУНКЦИИ handleDateClick и handleEventClick СЮДА
+// ВЫШЕ ИХ ИСПОЛЬЗОВАНИЯ В calendarOptions
+// ====================================================================
+
+const formatDateForRoute = (date) => {
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+function handleDateClick(clickInfo) {
+  const formattedDate = formatDateForRoute(clickInfo.date);
+  router.push(`/add-event/${formattedDate}`);
+}
+
+const handleEventClick = (clickInfo) => {
+  const eventId = clickInfo.event.id;
+  if (eventId) {
+    router.push(`/edit-event/${eventId}`);
+  } else {
+    console.warn('Clicked event has no ID:', clickInfo.event);
+    alert('Cannot edit event: Event ID is missing.');
+  }
+};
+
+// ====================================================================
+// КОНЕЦ ПЕРЕМЕЩЕННЫХ ФУНКЦИЙ
+// ====================================================================
+
+
 const fetchEvents = async () => {
   try {
     const fetchedEvents = await calendarService.getAllEvents();
-    // Преобразуем CalendarEntryResponseDTO в формат, понятный FullCalendar
     events.value = fetchedEvents.map(event => ({
-      id: event.id, // Используем id события
+      id: event.id,
       title: event.title,
-      start: event.startTime, // Используем startTime из DTO
-      end: event.endTime,     // Используем endTime из DTO
-      allDay: false,          // По умолчанию false, так как у вас есть время (startTime/endTime).
-      // Если событие в DTO должно быть на весь день без времени,
-      // вам потребуется дополнительная логика или поле в DTO.
-      // Если у вас есть метки с цветами, примените их здесь
-      // Например:
-      // backgroundColor: event.labels && event.labels.length > 0 ? getLabelColor(event.labels[0]) : '#80CBC4',
-      // borderColor: event.labels && event.labels.length > 0 ? getLabelColor(event.labels[0]) : '#80CBC4',
-      // Добавляем дополнительные свойства из DTO в extendedProps для использования при редактировании/отображении
+      start: event.startTime,
+      end: event.endTime,
+      allDay: false,
       extendedProps: {
         description: event.description,
         location: event.location,
-        labels: event.labels,      // Set<String> из DTO
+        labels: event.labels,
         diaryEntry: event.diaryEntry,
         moodRating: event.moodRating,
         userId: event.userId,
@@ -92,18 +106,11 @@ const fetchEvents = async () => {
 
     console.log('Processed events for FullCalendar:', events.value);
 
-     // *********** ДОБАВЬТЕ ЭТОТ БЛОК ***********
     const calendarApi = fullCalendarRef.value?.getApi();
     if (calendarApi) {
-      // Очищаем существующие события, а затем добавляем новые.
-      // Это более надежно, чем просто установка events: events.value, если есть проблемы с реактивностью.
-      calendarApi.removeAllEvents(); // Удаляем все текущие события
-      calendarApi.addEventSource(events.value); // Добавляем новые
-      // Или просто:
-      // calendarApi.setOption('events', events.value); // Альтернативный способ
+      calendarApi.removeAllEvents();
+      calendarApi.addEventSource(events.value);
     }
-    // ********************************************
-
 
   } catch (error) {
     console.error('Failed to fetch events from backend:', error.response ? error.response.data : error.message);
@@ -118,42 +125,39 @@ const calendarOptions = ref({
   locale: enLocale,
   timeZone: 'UTC',
   headerToolbar: false,
-  datesSet: () => { // <--- Здесь
+  datesSet: () => {
     const calendarApi = fullCalendarRef.value?.getApi();
     if (calendarApi) {
       calendarTitle.value = calendarApi.getCurrentData().viewTitle;
-      fetchEvents(); // <--- Эту строку нужно добавить
+      fetchEvents();
     }
   },
-  editable: true, // Позволяет перетаскивать и изменять размер событий
-  selectable: true, // Позволяет выбирать диапазоны дат
-  dateClick: handleDateClick,
-  events: events.value, // Теперь FullCalendar будет использовать данные из нашей реактивной переменной `events`
-  eventChange: async (changeInfo) => { // Срабатывает при перетаскивании или изменении размера события
+  editable: true,
+  selectable: true,
+  dateClick: handleDateClick, // <-- Теперь handleDateClick объявлен
+  eventClick: handleEventClick, // <-- Теперь handleEventClick объявлен
+  events: events.value,
+  eventChange: async (changeInfo) => {
     console.log('Event changed (UI):', changeInfo.event.title);
     try {
-      // Подготавливаем данные для CalendarEntryUpdateDTO
       const updatedEventData = {
         title: changeInfo.event.title,
-        startTime: changeInfo.event.startStr, // FullCalendar предоставляет в ISO 8601, что хорошо для LocalDateTime
-        endTime: changeInfo.event.endStr, // FullCalendar предоставляет в ISO 8601
-        // Берем остальные данные из extendedProps, которые были сохранены при загрузке
+        startTime: changeInfo.event.startStr,
+        endTime: changeInfo.event.endStr,
         description: changeInfo.event.extendedProps.description || null,
         location: changeInfo.event.extendedProps.location || null,
-        labels: changeInfo.event.extendedProps.labels || [], // Передаем как Set<String> (массив строк)
+        labels: changeInfo.event.extendedProps.labels || [],
         diaryEntry: changeInfo.event.extendedProps.diaryEntry || null,
         moodRating: changeInfo.event.extendedProps.moodRating || null,
       };
       await calendarService.updateEvent(changeInfo.event.id, updatedEventData);
       console.log('Event updated on backend successfully:', changeInfo.event.id);
-      // FullCalendar сам обновит UI, так что refetchEvents() здесь не нужен
     } catch (error) {
       console.error('Failed to update event on backend:', error.response ? error.response.data : error.message);
       alert('Failed to update event. Please refresh and try again.');
-      changeInfo.revert(); // Откатываем изменения в UI, если запрос к API не удался
+      changeInfo.revert();
     }
   },
-  // Остальные стили FullCalendar можно оставить как есть
   eventColor: '#80CBC4',
   eventTextColor: '#FFFFFF',
   dayHeaders: true,
@@ -168,23 +172,6 @@ watch(currentView, (newViewValue) => {
     calendarApi.changeView(newViewValue);
   }
 });
-
-// Удаляем этот watcher, так как events теперь не хранятся в localStorage
-// watch(localEvents, (newEventsValue) => { /* ... */ }, { deep: true });
-
-function handleDateClick(clickInfo) {
-  const formattedDate = formatDateForRoute(clickInfo.date);
-  // При клике на дату, перенаправляем на форму добавления события,
-  // передавая выбранную дату в URL.
-  router.push(`/add-event/${formattedDate}`);
-}
-
-const formatDateForRoute = (date) => {
-  const year = date.getFullYear();
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-  const day = date.getDate().toString().padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
 
 const goToPrev = () => {
   fullCalendarRef.value?.getApi().prev();
@@ -203,13 +190,12 @@ onMounted(() => {
   if (calendarApi) {
     calendarTitle.value = calendarApi.getCurrentData().viewTitle;
   }
-  // Загружаем события с бэкенда при монтировании компонента
   fetchEvents();
 });
 </script>
 
 <style lang="scss" scoped>
-/* Ваши стили остаются без изменений */
+/* Your existing styles remain unchanged */
 .full-calendar-wrapper {
   background-color: #FFFFFF;
   border-radius: var(--border-radius-base);
