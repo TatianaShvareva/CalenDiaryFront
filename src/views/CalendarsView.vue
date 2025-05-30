@@ -16,17 +16,8 @@
 
       <v-spacer></v-spacer>
 
-      <v-select
-        v-model="currentView"
-        :items="calendarViews"
-        class="ma-2"
-        density="compact"
-        label="View"
-        variant="solo"
-        hide-details
-        flat
-        style="max-width: 150px;"
-      ></v-select>
+      <v-select v-model="currentView" :items="calendarViews" class="ma-2" density="compact" label="View" variant="solo"
+        hide-details flat style="max-width: 150px;"></v-select>
     </v-toolbar>
 
     <v-sheet class="pa-4 full-calendar-wrapper">
@@ -45,8 +36,8 @@ import interactionPlugin from '@fullcalendar/interaction';
 import listPlugin from '@fullcalendar/list';
 import enLocale from '@fullcalendar/core/locales/en-gb.js';
 
-// FullCalendar v6.x.x styles are bundled with the JavaScript.
-// No explicit CSS imports are needed here.
+// Импортируем наш calendarService
+import calendarService from '@/services/calendarService';
 
 const router = useRouter();
 const fullCalendarRef = ref(null);
@@ -60,63 +51,109 @@ const calendarViews = ref([
   { title: 'List', value: 'listWeek' },
 ]);
 
-const LOCAL_STORAGE_EVENTS_KEY = 'calendiary-events';
+// Удаляем все, что связано с LOCAL_STORAGE_EVENTS_KEY, getInitialDefaultEvents, loadEventsFromLocalStorage, localEvents
+// const LOCAL_STORAGE_EVENTS_KEY = 'calendiary-events';
+// const getInitialDefaultEvents = () => { /* ... */ };
+// const loadEventsFromLocalStorage = () => { /* ... */ };
+// const localEvents = ref(loadEventsFromLocalStorage());
 
-const getInitialDefaultEvents = () => {
-  return [
-    { id: 'default1', title: 'Default Sample Meeting', start: '2025-05-28T10:30:00', end: '2025-05-28T12:30:00' },
-    { id: 'default2', title: 'Default Birthday Party', date: '2025-06-05' },
-  ];
-};
+// Новая реактивная переменная для хранения событий, загруженных с бэкенда
+const events = ref([]);
 
-const loadEventsFromLocalStorage = () => {
-  const savedEventsJson = localStorage.getItem(LOCAL_STORAGE_EVENTS_KEY);
-  if (savedEventsJson) {
-    try {
-      const parsedEvents = JSON.parse(savedEventsJson);
-      return Array.isArray(parsedEvents) ? parsedEvents : getInitialDefaultEvents();
-    } catch (error) {
-      console.error('Error parsing events from localStorage:', error);
-      return getInitialDefaultEvents();
+const calendiaryPrimary = computed(() => 'calendiary-primary');
+
+// Функция для загрузки событий с бэкенда
+const fetchEvents = async () => {
+  try {
+    const fetchedEvents = await calendarService.getAllEvents();
+    // Преобразуем CalendarEntryResponseDTO в формат, понятный FullCalendar
+    events.value = fetchedEvents.map(event => ({
+      id: event.id, // Используем id события
+      title: event.title,
+      start: event.startTime, // Используем startTime из DTO
+      end: event.endTime,     // Используем endTime из DTO
+      allDay: false,          // По умолчанию false, так как у вас есть время (startTime/endTime).
+      // Если событие в DTO должно быть на весь день без времени,
+      // вам потребуется дополнительная логика или поле в DTO.
+      // Если у вас есть метки с цветами, примените их здесь
+      // Например:
+      // backgroundColor: event.labels && event.labels.length > 0 ? getLabelColor(event.labels[0]) : '#80CBC4',
+      // borderColor: event.labels && event.labels.length > 0 ? getLabelColor(event.labels[0]) : '#80CBC4',
+      // Добавляем дополнительные свойства из DTO в extendedProps для использования при редактировании/отображении
+      extendedProps: {
+        description: event.description,
+        location: event.location,
+        labels: event.labels,      // Set<String> из DTO
+        diaryEntry: event.diaryEntry,
+        moodRating: event.moodRating,
+        userId: event.userId,
+      }
+    }));
+
+    console.log('Processed events for FullCalendar:', events.value);
+
+     // *********** ДОБАВЬТЕ ЭТОТ БЛОК ***********
+    const calendarApi = fullCalendarRef.value?.getApi();
+    if (calendarApi) {
+      // Очищаем существующие события, а затем добавляем новые.
+      // Это более надежно, чем просто установка events: events.value, если есть проблемы с реактивностью.
+      calendarApi.removeAllEvents(); // Удаляем все текущие события
+      calendarApi.addEventSource(events.value); // Добавляем новые
+      // Или просто:
+      // calendarApi.setOption('events', events.value); // Альтернативный способ
     }
+    // ********************************************
+
+
+  } catch (error) {
+    console.error('Failed to fetch events from backend:', error.response ? error.response.data : error.message);
+    alert('Failed to load events. Please ensure you are logged in and the backend is running.');
   }
-  return getInitialDefaultEvents();
 };
 
-const localEvents = ref(loadEventsFromLocalStorage());
-
-// Assuming you have setup Vuetify theme to use these color names
-// If not, you might need to use the hex code directly here: '#80CBC4'
-const calendiaryPrimary = computed(() => 'calendiary-primary'); // This will still rely on Vuetify's theme mapping
 
 const calendarOptions = ref({
   plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin],
   initialView: currentView.value,
   locale: enLocale,
+  timeZone: 'UTC',
   headerToolbar: false,
-  datesSet: () => {
+  datesSet: () => { // <--- Здесь
     const calendarApi = fullCalendarRef.value?.getApi();
     if (calendarApi) {
       calendarTitle.value = calendarApi.getCurrentData().viewTitle;
+      fetchEvents(); // <--- Эту строку нужно добавить
     }
   },
-  editable: true,
-  selectable: true,
+  editable: true, // Позволяет перетаскивать и изменять размер событий
+  selectable: true, // Позволяет выбирать диапазоны дат
   dateClick: handleDateClick,
-  events: localEvents.value,
-  eventChange: (changeInfo) => {
+  events: events.value, // Теперь FullCalendar будет использовать данные из нашей реактивной переменной `events`
+  eventChange: async (changeInfo) => { // Срабатывает при перетаскивании или изменении размера события
     console.log('Event changed (UI):', changeInfo.event.title);
-    const eventIndex = localEvents.value.findIndex(e => e.id === changeInfo.event.id);
-    if (eventIndex !== -1) {
-      localEvents.value.splice(eventIndex, 1, {
-        id: changeInfo.event.id,
+    try {
+      // Подготавливаем данные для CalendarEntryUpdateDTO
+      const updatedEventData = {
         title: changeInfo.event.title,
-        start: changeInfo.event.startStr,
-        end: changeInfo.event.endStr,
-        allDay: changeInfo.event.allDay,
-      });
+        startTime: changeInfo.event.startStr, // FullCalendar предоставляет в ISO 8601, что хорошо для LocalDateTime
+        endTime: changeInfo.event.endStr, // FullCalendar предоставляет в ISO 8601
+        // Берем остальные данные из extendedProps, которые были сохранены при загрузке
+        description: changeInfo.event.extendedProps.description || null,
+        location: changeInfo.event.extendedProps.location || null,
+        labels: changeInfo.event.extendedProps.labels || [], // Передаем как Set<String> (массив строк)
+        diaryEntry: changeInfo.event.extendedProps.diaryEntry || null,
+        moodRating: changeInfo.event.extendedProps.moodRating || null,
+      };
+      await calendarService.updateEvent(changeInfo.event.id, updatedEventData);
+      console.log('Event updated on backend successfully:', changeInfo.event.id);
+      // FullCalendar сам обновит UI, так что refetchEvents() здесь не нужен
+    } catch (error) {
+      console.error('Failed to update event on backend:', error.response ? error.response.data : error.message);
+      alert('Failed to update event. Please refresh and try again.');
+      changeInfo.revert(); // Откатываем изменения в UI, если запрос к API не удался
     }
   },
+  // Остальные стили FullCalendar можно оставить как есть
   eventColor: '#80CBC4',
   eventTextColor: '#FFFFFF',
   dayHeaders: true,
@@ -132,16 +169,13 @@ watch(currentView, (newViewValue) => {
   }
 });
 
-watch(localEvents, (newEventsValue) => {
-  localStorage.setItem(LOCAL_STORAGE_EVENTS_KEY, JSON.stringify(newEventsValue));
-  const calendarApi = fullCalendarRef.value?.getApi();
-  if (calendarApi) {
-    calendarApi.refetchEvents();
-  }
-}, { deep: true });
+// Удаляем этот watcher, так как events теперь не хранятся в localStorage
+// watch(localEvents, (newEventsValue) => { /* ... */ }, { deep: true });
 
 function handleDateClick(clickInfo) {
   const formattedDate = formatDateForRoute(clickInfo.date);
+  // При клике на дату, перенаправляем на форму добавления события,
+  // передавая выбранную дату в URL.
   router.push(`/add-event/${formattedDate}`);
 }
 
@@ -169,22 +203,21 @@ onMounted(() => {
   if (calendarApi) {
     calendarTitle.value = calendarApi.getCurrentData().viewTitle;
   }
+  // Загружаем события с бэкенда при монтировании компонента
+  fetchEvents();
 });
 </script>
 
 <style lang="scss" scoped>
-/* No @use statement needed here */
-
+/* Ваши стили остаются без изменений */
 .full-calendar-wrapper {
-  background-color: #FFFFFF; /* was vars.$calendiary-surface */
+  background-color: #FFFFFF;
   border-radius: var(--border-radius-base);
   box-shadow: var(--box-shadow-light);
-  padding: 0px !important;
-  margin: calc(var(--spacing-unit) * 2);
-}
-
-.fc .fc-view-harness {
-  height: calc(100vh - 64px - (var(--spacing-unit) * 4)) !important;
+  padding: 0 !important;
+  margin: 24px auto;
+  /* less margin at top, none at bottom */
+  max-width: 1200px;
 }
 
 .fc .fc-daygrid-day-frame {
@@ -193,23 +226,12 @@ onMounted(() => {
 }
 
 .fc .fc-daygrid-day-frame:hover {
-  /*
-    Original was: background-color: color.adjust(vars.$calendiary-background, $lightness: 5%) !important;
-    $calendiary-background: #F8F8F8;
-    Lighten #F8F8F8 by 5% is roughly #FFFFFF (or very close, depending on exact Sass implementation).
-    Using a hardcoded color that is 5% lighter than #F8F8F8.
-  */
-  background-color: #FFFFFF !important; /* Approximation of lighten($calendiary-background, 5%) */
+  background-color: #FFFFFF !important;
 }
 
 .fc .fc-day-today {
-  /*
-    Original was: background-color: color.adjust(vars.$calendiary-tertiary, $lightness: 15%) !important;
-    $calendiary-tertiary: #90CAF9;
-    Lighten #90CAF9 by 15% is roughly #B2E5FC.
-  */
-  background-color: #B2E5FC !important; /* Approximation of lighten($calendiary-tertiary, 15%) */
-  border: 1px solid #90CAF9 !important; /* was vars.$calendiary-tertiary */
+  background-color: #B2E5FC !important;
+  border: 1px solid #90CAF9 !important;
   border-radius: calc(var(--border-radius-base) / 2);
 }
 
@@ -217,26 +239,25 @@ onMounted(() => {
   border-radius: calc(var(--border-radius-base) / 2) !important;
   font-weight: 500 !important;
   border: none !important;
-  background-color: #80CBC4 !important; /* was vars.$calendiary-primary */
-  color: #FFFFFF !important; /* was vars.$calendiary-text-light */
+  background-color: #80CBC4 !important;
+  color: #FFFFFF !important;
 }
 
 .fc .fc-toolbar-title {
   font-size: 1.8rem;
   font-weight: 500;
-  color: #424242; /* was vars.$calendiary-text-dark */
+  color: #424242;
 }
 
 .fc .fc-col-header-cell-cushion {
   text-transform: uppercase;
   font-weight: 500;
-  color: #424242; /* was vars.$calendiary-text-dark */
+  color: #424242;
 }
 
 .fc-day-selected {
-  /* Original was: rgba(vars.$calendiary-primary, 0.1) */
-  background-color: rgba(128, 203, 196, 0.1) !important; /* rgba(80CBC4, 0.1) */
-  border: 1px solid #80CBC4 !important; /* was vars.$calendiary-primary */
+  background-color: rgba(128, 203, 196, 0.1) !important;
+  border: 1px solid #80CBC4 !important;
 }
 
 .fc .fc-timegrid-slot {
@@ -245,7 +266,7 @@ onMounted(() => {
 
 .fc .fc-timegrid-slot-label {
   padding-right: calc(var(--spacing-unit) / 2);
-  color: #424242; /* was vars.$calendiary-text-dark */
+  color: #424242;
 }
 
 .fc-daygrid-event-harness {
@@ -261,18 +282,19 @@ onMounted(() => {
 }
 
 .v-input--density-compact .v-field--variant-solo {
-  /* Original was: rgba(vars.$calendiary-text-light, 0.2) */
-  background-color: rgba(255, 255, 255, 0.2) !important; /* rgba(FFFFFF, 0.2) */
-  color: #FFFFFF !important; /* was vars.$calendiary-text-light */
+  background-color: rgba(255, 255, 255, 0.2) !important;
+  color: #FFFFFF !important;
 }
+
 .v-input--density-compact .v-field__input {
-  color: #FFFFFF !important; /* was vars.$calendiary-text-light */
+  color: #FFFFFF !important;
 }
+
 .v-input--density-compact .v-field__label {
-  /* Original was: rgba(vars.$calendiary-text-light, 0.7) */
-  color: rgba(255, 255, 255, 0.7) !important; /* rgba(FFFFFF, 0.7) */
+  color: rgba(255, 255, 255, 0.7) !important;
 }
+
 .v-input--density-compact .v-icon {
-  color: #FFFFFF !important; /* was vars.$calendiary-text-light */
+  color: #FFFFFF !important;
 }
 </style>

@@ -1,11 +1,8 @@
 // C:\Users\human\.vscode\CalenDiaryFront\calendiary-frontend\src\store\auth.js
 
-import axios from '@/api/axios'; // Import our configured axios instance
-import router from '@/router'; // Import router for redirections
+import authService from '@/services/authService';
+import router from '@/router';
 // import { jwtDecode } from 'jwt-decode'; // <-- Раскомментировать, если решите декодировать JWT для email (пока не требуется)
-
-// Constants for API URLs
-const AUTH_API_PREFIX = '/auth'; // Prefix for all authentication endpoints
 
 // НОВАЯ КОНСТАНТА ДЛЯ GITHUB OAUTH2
 const OAUTH2_GITHUB_AUTH_URL = 'http://localhost:8001/oauth2/authorization/github'; // URL для начала GitHub OAuth2 потока
@@ -89,26 +86,23 @@ const authModule = {
       commit('CLEAR_AUTH_ERRORS'); // Clear previous errors
 
       try {
-        const response = await axios.post(`${AUTH_API_PREFIX}/register`, userData, {
-          headers: { skipAuthorization: true }
-        });
+        const responseData = await authService.register(userData);
 
-        // Внимательно: если бэкенд возвращает только текстовое сообщение "User registered successfully",
-        // тогда response.data.token будет undefined, и код пойдет в else.
-        // Если бэкенд возвращает токен после регистрации, то это хорошо.
-        if (response.data && response.data.token) {
+        // Если бэкенд возвращает токен и данные пользователя после регистрации (объект)
+        if (responseData && responseData.token) {
           commit('SET_AUTH_DATA', {
-            token: response.data.token,
+            token: responseData.token,
             user: {
-              id: response.data.id,
-              name: response.data.name,
-              email: response.data.email,
-              role: response.data.role
+              id: responseData.user?.id,
+              name: responseData.user?.name,
+              email: responseData.user?.email,
+              role: responseData.user?.role
             }
           });
           alert('Registration successful! You are now logged in.');
           router.push('/calendars');
         } else {
+          // Если регистрация успешна, но токен не был возвращен (например, просто сообщение или статус)
           alert('Registration successful! Please sign in.');
           router.push('/signin');
         }
@@ -133,22 +127,20 @@ const authModule = {
       commit('CLEAR_AUTH_ERRORS');
 
       try {
-        const response = await axios.post(`${AUTH_API_PREFIX}/login`, credentials, {
-          headers: { skipAuthorization: true }
-        });
+        // authService.login теперь возвращает ТОЛЬКО строку токена
+        const token = await authService.login(credentials);
 
-        const token = response.data; // Ожидаем, что бэкенд возвращает ТОЛЬКО строку JWT-токена
+        // В этом сценарии (бэкенд возвращает только токен),
+        // данных пользователя мы не получаем вместе с логином.
+        // Поэтому 'user' будет null. Если нужны данные пользователя,
+        // придется делать отдельный запрос или декодировать токен (если он их содержит).
+        const user = null; // Или, если токен содержит данные пользователя, декодировать его.
 
-        if (typeof token === 'string' && token.length > 0) {
-          // Если бэкенд возвращает только токен, а не объект с данными пользователя,
-          // user будет null. Возможно, вам понадобится другой эндпоинт для получения профиля
-          // или декодирование токена, если он содержит id/email.
-          // Для простоты, пока что user: null, так как он не приходит с логином.
-          commit('SET_AUTH_DATA', { token: token, user: null }); // user: null, так как данные не пришли
+        if (token && typeof token === 'string' && token.length > 0) {
+          commit('SET_AUTH_DATA', { token: token, user: user });
           alert('Sign in successful!');
           router.push('/calendars');
         } else {
-          // Это случится, если response.data не строка или пустая
           console.error('Sign In successful but no valid token string received or token is empty.');
           alert('Sign in successful, but failed to get user token.');
           router.push('/signin');
@@ -157,15 +149,21 @@ const authModule = {
         console.error('Sign In failed:', error.response || error);
         let errorMessage = 'Invalid credentials or an unexpected error occurred.';
         if (error.response && error.response.data) {
-          errorMessage = error.response.data; // Здесь вы ожидаете, что error.response.data - это строка ошибки
+          // Здесь ожидаем, что error.response.data будет объектом с полем 'message',
+          // так как ваш бэкенд возвращает { "code": 401, "message": "Invalid credentials", ... }
+          errorMessage = error.response.data.message || JSON.stringify(error.response.data);
+        } else if (error.message) {
+          errorMessage = error.message;
         }
         commit('SET_SIGN_IN_ERROR', errorMessage);
-        throw error;
+        // Не бросаем ошибку дальше, чтобы показать её пользователю через alert/UI
+        // throw error; // Если вам нужно, чтобы компонент тоже обработал ошибку, раскомментируйте
       }
     },
 
     logout({ commit }) {
       commit('LOGOUT');
+      authService.logoutBackend(); // Вызываем эндпоинт на бэкенде для логаута (если есть)
       alert('Logged out successfully!');
       router.push('/'); // После выхода можно перенаправить на главную или на страницу входа
     },

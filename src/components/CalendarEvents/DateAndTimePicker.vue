@@ -17,16 +17,17 @@
         :variant="'outlined'"
       />
     </template>
-    <v-card class="datetime-card"> <v-date-picker
+    <v-card class="datetime-card">
+      <v-date-picker
         v-model="selectedDate"
         color="primary"
-        @update:model-value="onDateOrTimePicked"
-        width="100%"
+        @update:model-value="onDatePicked" width="100%"
         header-color="primary"
       />
       <v-divider />
       <v-card-text class="pa-2">
-        <v-row dense no-gutters> <v-col cols="6">
+        <v-row dense no-gutters>
+          <v-col cols="6">
             <v-select
               v-model="selectedHour"
               :items="hours"
@@ -53,8 +54,7 @@
         </v-row>
       </v-card-text>
       <v-card-actions class="justify-end py-1">
-        <v-btn text @click="menu = false">OK</v-btn>
-      </v-card-actions>
+        <v-btn text @click="closeMenuAndEmit">OK</v-btn> </v-card-actions>
     </v-card>
   </v-menu>
 </template>
@@ -108,15 +108,14 @@ watch(
   { immediate: true }
 );
 
-function onDateOrTimePicked() {
-  console.log('onDateOrTimePicked called');
-  // Переносим логику обновления объединенного значения в отдельную функцию
+function onDatePicked() {
+  // When a date is picked, the time might not be set yet.
+  // We'll update the model value, but not close the menu yet.
   updateModelValue();
 }
 
 function onTimeUpdate() {
-  console.log('onTimeUpdate called'); // Будет вызываться при каждом выборе часа/минуты
-  // Обновляем модель при изменении часа или минуты
+  // When an hour or minute is picked, update the model value.
   updateModelValue();
 }
 
@@ -129,36 +128,37 @@ function updateModelValue() {
     emit('update:modelValue', null);
   }
 }
+
+// New function to close the menu and ensure value is emitted
+function closeMenuAndEmit() {
+  updateModelValue(); // Ensure the latest value is emitted
+  menu.value = false; // Close the menu
+}
 </script>
 
 <style scoped>
-/* Добавляем класс для v-menu */
+/* existing styles */
 .custom-datetime-menu {
-  /* Задаем фиксированную ширину или min-width, чтобы избежать сжатия */
-  min-width: 380px !important; /* Увеличенная ширина */
-  max-width: 450px !important; /* Ограничиваем, чтобы не было слишком широко */
+  min-width: 380px !important;
+  max-width: 450px !important;
   box-shadow: 0px 5px 5px -3px rgba(0,0,0,0.2),
               0px 8px 10px 1px rgba(0,0,0,0.14),
-              0px 3px 14px 2px rgba(0,0,0,0.12); /* Тень для лучшего вида */
+              0px 3px 14px 2px rgba(0,0,0,0.12);
   border-radius: 4px;
-  overflow: hidden; /* Чтобы содержимое не вылезало */
+  overflow: hidden;
 }
 
-/* Стили для v-card внутри меню */
 .datetime-card {
-  /* min-width: 360px;  Уже установлено через custom-datetime-menu */
   width: 100%;
 }
 
-/* Убираем лишние отступы вокруг v-select */
 .hour-select .v-input__control,
 .minute-select .v-input__control {
   padding-left: 0px !important;
   padding-right: 0px !important;
 }
 
-/* Немного подгоним поля ввода */
 .hour-select, .minute-select {
-  margin: 0px 4px; /* Добавим небольшой горизонтальный отступ между ними */
+  margin: 0px 4px;
 }
 </style>

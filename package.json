@@ -17,6 +17,7 @@
     "@fullcalendar/vue3": "^6.1.17",
     "axios": "^1.7.2",
     "core-js": "^3.8.3",
+    "date-fns": "^4.1.0",
     "vue": "^3.2.13",
     "vue-file-toolbar-menu": "^2.2.0",
     "vue-router": "^4.0.3",

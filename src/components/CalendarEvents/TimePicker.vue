@@ -18,8 +18,10 @@
         :variant="'outlined'"
       />
     </template>
-    <v-card class="time-card"> <v-card-text class="pa-2">
-        <v-row dense no-gutters> <v-col cols="6">
+    <v-card class="time-card">
+      <v-card-text class="pa-2">
+        <v-row dense no-gutters>
+          <v-col cols="6">
             <v-select
               v-model="selectedHour"
               :items="hours"
@@ -46,8 +48,7 @@
         </v-row>
       </v-card-text>
       <v-card-actions class="justify-end py-1">
-        <v-btn text @click="timeMenu = false">OK</v-btn>
-      </v-card-actions>
+        <v-btn text @click="closeMenuAndEmit">OK</v-btn> </v-card-actions>
     </v-card>
   </v-menu>
 </template>
@@ -99,25 +100,35 @@ watch(
 );
 
 function onTimeUpdate() {
-  console.log('onTimeUpdate called'); // Для отладки
+  // Update model value immediately on hour/minute selection
+  updateModelValue();
+}
+
+function updateModelValue() {
   if (selectedHour.value !== null && selectedMinute.value !== null) {
     emit('update:modelValue', `${String(selectedHour.value).padStart(2, '0')}:${String(selectedMinute.value).padStart(2, '0')}`);
   } else {
     emit('update:modelValue', null);
   }
 }
+
+// New function to close the menu and ensure value is emitted
+function closeMenuAndEmit() {
+  updateModelValue(); // Ensure the latest value is emitted
+  timeMenu.value = false; // Close the menu
+}
 </script>
 
 <style scoped>
+/* existing styles */
 .selected-time input {
   font-weight: bold;
   color: #1976d2;
   background: #e3f2fd;
 }
 
-/* Добавляем класс для v-menu */
 .custom-time-menu {
-  min-width: 240px !important; /* Увеличенная ширина */
+  min-width: 240px !important;
   max-width: 300px !important;
   box-shadow: 0px 5px 5px -3px rgba(0,0,0,0.2),
               0px 8px 10px 1px rgba(0,0,0,0.14),
@@ -126,19 +137,16 @@ function onTimeUpdate() {
   overflow: hidden;
 }
 
-/* Стили для v-card внутри меню */
 .time-card {
   width: 100%;
 }
 
-/* Убираем лишние отступы вокруг v-select */
 .hour-select .v-input__control,
 .minute-select .v-input__control {
   padding-left: 0px !important;
   padding-right: 0px !important;
 }
 
-/* Немного подгоним поля ввода */
 .hour-select, .minute-select {
   margin: 0px 4px;
 }

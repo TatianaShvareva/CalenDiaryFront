@@ -5,12 +5,11 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue'; // Удаляем defineProps из импортов
+import { onMounted, watch, ref } from 'vue';
 import FullCalendar from '@fullcalendar/vue3';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
 
-// defineProps теперь не импортируется, но используется
 const props = defineProps({
   initialDate: {
     type: String,
@@ -19,6 +18,10 @@ const props = defineProps({
   onDateClick: {
     type: Function,
     default: () => {},
+  },
+  events: { // <--- НОВЫЙ ПРОПС
+    type: Array,
+    default: () => [],
   },
 });
 
@@ -29,7 +32,8 @@ onMounted(() => {
   }
 });
 
-const options = {
+// Используем ref для options, чтобы FullCalendar мог реактивно обновляться
+const options = ref({ // <--- ОБЕРНУЛИ options в ref
   plugins: [dayGridPlugin, interactionPlugin],
   initialDate: props.initialDate,
   headerToolbar: false,
@@ -37,8 +41,14 @@ const options = {
   dateClick: props.onDateClick,
   height: 'auto',
   contentHeight: 'auto',
-  events: [],
-};
+  events: props.events, // <--- ИСПОЛЬЗУЕМ НОВЫЙ ПРОПС ЗДЕСЬ
+});
+
+// Добавим watcher для обновления событий, когда они меняются в пропсах
+watch(() => props.events, (newEvents) => {
+  options.value.events = newEvents;
+}, { deep: true }); // deep: true для глубокого отслеживания изменений в массиве событий
+
 </script>
 
 <style scoped>

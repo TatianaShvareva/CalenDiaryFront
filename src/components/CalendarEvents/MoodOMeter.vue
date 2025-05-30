@@ -2,13 +2,11 @@
   <div class="mood-o-meter">
     <span>Mood:</span>
     <v-tooltip
-      v-for="colorOption in moodColors"
-      :key="colorOption.value"
+      v-for="colorOption in moodOptions" :key="colorOption.value"
       location="top"
     >
-      <template #activator="{ props }">
-        <v-btn
-          v-bind="props"
+      <template #activator="{ props: activatorProps }"> <v-btn
+          v-bind="activatorProps"
           :icon="colorOption.icon"
           :color="internalMood === colorOption.value ? colorOption.color : '#e0e0e0'"
           @click="internalMood = colorOption.value"
@@ -25,7 +23,7 @@ import { ref, watch } from 'vue';
 
 const props = defineProps({
   modelValue: {
-    type: String,
+    type: [Number, null], // <-- ИЗМЕНЕНО: теперь принимает Number или null
     default: null,
   },
 });
@@ -34,12 +32,13 @@ const emit = defineEmits(['update:modelValue']);
 
 const internalMood = ref(props.modelValue);
 
-const moodColors = [
-  { value: 'ecstatic', color: '#43a047', icon: 'mdi-heart', label: 'Ecstatic (Best)' },
-  { value: 'happy', color: '#8bc34a', icon: 'mdi-heart', label: 'Happy' },
-  { value: 'neutral', color: '#ffeb3b', icon: 'mdi-heart', label: 'Neutral' },
-  { value: 'sad', color: '#ff9800', icon: 'mdi-heart', label: 'Sad' },
-  { value: 'miserable', color: '#e53935', icon: 'mdi-heart', label: 'Miserable (Worst)' },
+// ИЗМЕНЕНО: Теперь value числовое
+const moodOptions = [
+  { value: 5.0, color: '#43a047', icon: 'mdi-heart', label: 'Ecstatic (Best)' }, // Например, 5.0
+  { value: 4.0, color: '#8bc34a', icon: 'mdi-heart', label: 'Happy' },      // Например, 4.0
+  { value: 3.0, color: '#ffeb3b', icon: 'mdi-heart', label: 'Neutral' },    // Например, 3.0
+  { value: 2.0, color: '#ff9800', icon: 'mdi-heart', label: 'Sad' },        // Например, 2.0
+  { value: 1.0, color: '#e53935', icon: 'mdi-heart', label: 'Miserable (Worst)' }, // Например, 1.0
 ];
 
 watch(
@@ -50,11 +49,12 @@ watch(
 );
 
 watch(internalMood, (newValue) => {
-  emit('update:modelValue', newValue);
+  emit('update:modelValue', newValue); // Теперь эмитится числовое значение
 });
 </script>
 
 <style scoped>
+/* Стили остаются без изменений */
 .mood-o-meter {
   display: flex;
   align-items: center;

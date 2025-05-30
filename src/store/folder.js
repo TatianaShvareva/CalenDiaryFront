@@ -1,7 +1,8 @@
 // C:\Users\human\.vscode\CalenDiaryFront\calendiary-frontend\src\store\folder.js
-import axios from '@/api/axios'; // Импортируем настроенный axios
+// ИСПРАВЛЕНИЕ: Импортируем mainApi для запросов, требующих аутентификации
+import axios from '@/api/mainApi'; // <--- ИСПРАВЛЕНО
 
-/* eslint-disable */
+/* eslint-disable */ // Пока оставлю, если есть другие ошибки ESLint
 const state = {
     folderId: null,
     title: null,
@@ -31,19 +32,20 @@ const mutations = {
     requestStatus(state, status) {
         state.requestStatus = status
     },
-    errorFolderId(state, errorStatus, folderId) {
+    // Исправлена мутация: она должна принимать только 2 аргумента
+    errorFolderId(state, payload) { // <--- ИСПРАВЛЕНО: мутация принимает (state, payload)
+        const { errorStatus, folderId } = payload; // Деструктурируем payload
         state.errorFolderId = "Please use digits. Folder ID: " + folderId + " Request status: " + errorStatus
         state.folderStatus = null
     },
     updated(state, folderData) {
         console.log('folder.js -> mutation -> update')
-        // Здесь можно обновить состояние папки, если нужно
         state.folderId = folderData.folderId;
         state.title = folderData.title;
         state.userId = folderData.userId;
         state.requestStatus = folderData.status;
     },
-    deleteFolder(state, status) { // Принимаем только статус, т.к. данные папки уже удалены
+    deleteFolder(state, status) {
         console.log('folder.js -> mutation -> delete');
         state.folderId = null;
         state.title = null;
@@ -85,23 +87,23 @@ const mutations = {
 const actions = {
     async insertFolderData({ commit }, data) {
         const folderDto = {
-            folderId: null, // ID генерируется на бэкенде
+            folderId: null,
             title: data.title,
-            userId: data.userId // Предполагаем, что userId передается сюда
+            userId: data.userId
         };
 
         const formData = new FormData();
-        formData.append('folderDto', JSON.stringify(folderDto));
+        formData.append('folderDto', new Blob([JSON.stringify(folderDto)], { type: 'application/json' })); // <--- ИСПРАВЛЕНО
 
-        let http = `/api/v1/users/${data.userId}/folders/add-folder`; // Используем обратные кавычки для интерполяции
+        let http = `/api/v1/users/${data.userId}/folders/add-folder`;
         let response = await axios.post(http, formData, {
             headers: {
-                'Content-Type': 'multipart/form-data' // Указываем тип контента для FormData
+                // 'Content-Type': 'multipart/form-data' - Axios сам устанавливает его
             }
         })
             .catch(error => {
                 console.error('Error during inserting the new FOLDER: ', error);
-                throw error; // Перебрасываем ошибку, чтобы компонент мог ее обработать
+                throw error;
             })
         if (!response) {
             commit('requestStatus', 'error');
@@ -114,7 +116,7 @@ const actions = {
                 "folderId": responseData.folderId,
                 "title": responseData.title,
                 "userId": responseData.userId,
-                "contents": responseData.contents, // Это может быть пустым массивом при создании
+                "contents": responseData.contents,
                 "status": response.status
             }
             commit('insertFolderData', folderData)
@@ -130,11 +132,11 @@ const actions = {
             userId: data.userId
         };
         const formData = new FormData();
-        formData.append('folderDto', JSON.stringify(folderDto));
+        formData.append('folderDto', new Blob([JSON.stringify(folderDto)], { type: 'application/json' })); // <--- ИСПРАВЛЕНО
 
         let response = await axios.put(http, formData, {
             headers: {
-                'Content-Type': 'multipart/form-data'
+                // 'Content-Type': 'multipart/form-data' - Axios сам устанавливает его
             }
         })
             .catch(error => {
@@ -148,7 +150,6 @@ const actions = {
 
         if (response.status >= 200 && response.status < 300) {
             console.log(" folder.js -> action -> update folder -> response status -> " + response.status)
-            // Обновляем данные в состоянии после успешного обновления
             commit('updated', {
                 folderId: response.data.folderId,
                 title: response.data.title,
@@ -165,8 +166,7 @@ const actions = {
         commit('changeFolderId', folderId)
     },
 
-    // get folder's data from DB per ID
-    async findAllFolders({ commit }, userId) { // Изменяем dispatch на commit, чтобы напрямую обновить auth state
+    async findAllFolders({ commit }, userId) {
         let http = `/api/v1/users/${userId}/folders/all`;
         let response = await axios.get(http)
             .catch(error => {
@@ -174,28 +174,13 @@ const actions = {
                 throw error;
             })
         if (!response) {
-            // commit('requestStatus', 'error'); // Можно установить статус ошибки в этом модуле
             return;
         }
 
         if (response.status == 200) {
-            // Теперь, вместо allFoldersData в auth модуле, мы будем обновлять здесь.
-            // Но auth модуль все еще содержит 'folders' в state. Мы убрали это из auth.js
-            // Поэтому, здесь мы должны просто вернуть данные или сохранить их в этом модуле,
-            // если они нужны для других целей, кроме отображения в CalendarsView.
-            // Если folders должны быть доступны глобально, можно добавить их в корневой state
-            // или передавать через пропсы/provide/inject.
-            // Для простоты, пока будем считать, что они нужны компоненту, который вызывает этот экшен.
-            // Если они все-таки нужны в auth модуле для какой-то причины, то верните allFoldersData в auth.js
-            // и диспатчите туда.
             console.log("All folders fetched:", response.data);
-            // Если вы хотите обновить `auth.folders`, то это нужно делать так:
-            // store.commit('auth/foldersData', response.data); // Вызываем мутацию в другом модуле
-            // Но мы приняли решение, что `auth.folders` это дублирование.
-            // Поэтому просто возвращаем данные, чтобы вызывающий компонент мог их использовать.
             return response.data;
         } else {
-            // commit('requestStatus', response.status);
             return null;
         }
     },
@@ -239,7 +224,7 @@ const actions = {
             return;
         }
         if (response.status >= 200 && response.status < 300) {
-            commit('deleteFolder', response.status) // Вызываем мутацию для очистки состояния
+            commit('deleteFolder', response.status)
             commit('requestStatus', response.status)
         } else {
             commit('requestStatus', response.status);

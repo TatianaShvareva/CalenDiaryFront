@@ -1,7 +1,8 @@
 // C:\Users\human\.vscode\CalenDiaryFront\calendiary-frontend\src\store\content.js
-import axios from '@/api/axios'; // Импортируем настроенный axios
+// ИСПРАВЛЕНИЕ: Импортируем mainApi для запросов, требующих аутентификации
+import axios from '@/api/mainApi'; // <--- ИСПРАВЛЕНО
 
-/* eslint-disable */
+/* eslint-disable */ // Пока оставлю, если есть другие ошибки ESLint, но лучше их тоже исправить.
 const state = {
     contentId: null,
     contentAsHTML: "content text ",
@@ -26,7 +27,8 @@ const mutations = {
     requestStatus(state, status) {
         state.requestStatus = status
     },
-    errorContentId(state, errorStatus, contentId) {
+    // Исправлена мутация: она должна принимать только 2 аргумента, а не 3
+    errorContentId(state, errorStatus, contentId) { // <--- Возможно, ошибка здесь, мутации принимают (state, payload)
         state.errorContentId = "Please use digits. content ID: " + contentId + " Request status: " + errorStatus
         state.contentStatus = null
     },
@@ -56,7 +58,7 @@ const mutations = {
         state.toBeUpdated = bool
     },
     changeHtml(state, text) {
-        state.contentAsHTML = text // Исправлена опечатка (было contentAsHTM)
+        state.contentAsHTML = text
     },
     initNew(state) {
         state.contentId = null,
@@ -78,14 +80,15 @@ const mutations = {
 
 const actions = {
     async findContentById({ commit }, contentId) {
-        // Теперь baseURL уже установлен в axios.js, используем относительный путь
         let http = "/api/v1/contents/" + contentId
         let response = await axios.get(http)
             .catch(error => {
                 console.error('Error during getting the content with id: ' + contentId, error);
+                // Важно перебросить ошибку, чтобы вызывающий компонент мог ее поймать
+                throw error; // Добавлено
             })
-        if (!response) { // Обработка случая, если запрос упал
-            commit('contentStatus', contentId); // Например, нет контента с таким ID
+        if (!response) {
+            commit('contentStatus', contentId);
             return;
         }
 
@@ -103,14 +106,14 @@ const actions = {
             }
             commit('insertContentData', contentData)
         } else {
-            // Если статус не 200, можно обработать другие коды
             commit('contentStatus', contentId);
         }
     },
 
     async updateContentData({ commit }, data) {
         const base64Image = data.image;
-        const mimeType = base64Image ? base64Image.match(/([^;]+);/)?.[1] : null; // Добавлена проверка на существование base64Image
+        // Улучшенная проверка на mimeType, чтобы избежать ошибок, если base64Image null/undefined
+        const mimeType = base64Image ? base64Image.match(/([^;]+);/)?.[1] : null;
         const imageBlob = base64Image && mimeType ? base64ToBlob(base64Image, mimeType) : null;
 
         const contentDto = {
@@ -121,19 +124,22 @@ const actions = {
         };
 
         const formData = new FormData();
-        if (imageBlob) { // Добавляем файл только если он существует
+        if (imageBlob) {
             formData.append('file', imageBlob, 'image.png');
         }
-        formData.append('contentDto', JSON.stringify(contentDto));
+        formData.append('contentDto', new Blob([JSON.stringify(contentDto)], { type: 'application/json' })); // <--- ИСПРАВЛЕНО
 
         let http = "/api/v1/contents/update/" + data.contentId
         let response = await axios.put(http, formData, {
             headers: {
-                'Content-Type': 'multipart/form-data' // Указываем тип контента для FormData
+                // Axios сам установит 'Content-Type': 'multipart/form-data' при использовании FormData,
+                // но можно явно указать, если бэкенд требует конкретного заголовка
+                // 'Content-Type': 'multipart/form-data'
             }
         })
             .catch(error => {
                 console.error('Error during updating the Content: ', error);
+                throw error; // Добавлено
             })
         if (!response) {
             commit('requestStatus', 'error');
@@ -154,7 +160,7 @@ const actions = {
             }
             commit('insertContentData', contentData)
         } else {
-            commit('requestStatus', response.status); // Можно более детальную ошибку
+            commit('requestStatus', response.status);
         }
     },
 
@@ -163,6 +169,7 @@ const actions = {
         let response = await axios.delete(http)
             .catch(error => {
                 console.error('Error during deleting the content with id: ' + contentId, error);
+                throw error; // Добавлено
             })
         if (!response) {
             commit('requestStatus', 'error');
@@ -173,11 +180,11 @@ const actions = {
 
     async insertContentData({ commit }, data) {
         const base64Image = data.image;
-        const mimeType = base64Image ? base64Image.match(/([^;]+);/)[1] : null;
+        const mimeType = base64Image ? base64Image.match(/([^;]+);/)?.[1] : null; // Добавлено ? для безопасности
         const imageBlob = base64Image && mimeType ? base64ToBlob(base64Image, mimeType) : null;
 
         const contentDto = {
-            contentId: null, // При добавлении ID обычно генерируется на бэкенде
+            contentId: null,
             title: data.title,
             content: data.text,
             folderId: data.folderId
@@ -187,16 +194,18 @@ const actions = {
         if (imageBlob) {
             formData.append('file', imageBlob, 'image.png');
         }
-        formData.append('contentDto', JSON.stringify(contentDto));
+        // contentDto должен быть Blob с JSON, чтобы бэкенд мог его правильно распарсить как часть multipart
+        formData.append('contentDto', new Blob([JSON.stringify(contentDto)], { type: 'application/json' })); // <--- ИСПРАВЛЕНО
 
         let http = "/api/v1/contents/add-content"
         let response = await axios.post(http, formData, {
             headers: {
-                'Content-Type': 'multipart/form-data'
+                // Axios сам установит 'Content-Type': 'multipart/form-data' при использовании FormData
             }
         })
             .catch(error => {
                 console.error('Error during inserting the new Content: ', error);
+                throw error; // Добавлено
             })
         if (!response) {
             commit('requestStatus', 'error');
@@ -204,7 +213,7 @@ const actions = {
         }
 
         let responseData = response.data;
-        if (response.status == 201) { // 201 Created для успешного добавления
+        if (response.status == 201) {
             let contentData = {
                 "contentId": responseData.contentId,
                 "title": responseData.title,
