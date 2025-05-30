@@ -104,6 +104,8 @@ const fetchEvents = async () => {
       }
     }));
 
+    console.log(fetchedEvents)
+
     console.log('Processed events for FullCalendar:', events.value);
 
     const calendarApi = fullCalendarRef.value?.getApi();

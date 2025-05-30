@@ -1,7 +1,7 @@
 <template>
   <v-menu
     v-model="menu"
-    :close-on-content-click="false"
+    :close-on-content-click="false" 
     transition="scale-transition"
     offset-y
     content-class="custom-datetime-menu"
@@ -19,48 +19,81 @@
     </template>
     <v-card class="datetime-card">
       <v-date-picker
-        v-model="selectedDate"
+        v-model="internalSelectedDate" 
         color="primary"
-        @update:model-value="onDatePicked" width="100%"
+        @update:model-value="onDatePicked"
+        width="100%"
         header-color="primary"
       />
       <v-divider />
       <v-card-text class="pa-2">
         <v-row dense no-gutters>
           <v-col cols="6">
-            <v-select
-              v-model="selectedHour"
-              :items="hours"
-              label="Hour"
-              density="compact"
-              variant="outlined"
-              hide-details
-              @update:modelValue="onTimeUpdate"
-              class="hour-select"
-            />
+            <v-menu :close-on-content-click="false" location="bottom right">
+                <template #activator="{ props: menuProps }">
+                    <v-text-field
+                        v-bind="menuProps"
+                        label="Hour"
+                        v-model="selectedHour"
+                        readonly
+                        density="compact"
+                        variant="outlined"
+                        hide-details
+                        class="hour-select"
+                    />
+                </template>
+                <v-list class="time-list">
+                    <v-list-item
+                        v-for="hourItem in hours"
+                        :key="hourItem"
+                        :value="hourItem"
+                        @click="selectHour(hourItem)"
+                        :class="{ 'v-list-item--active': selectedHour === hourItem }"
+                    >
+                        <v-list-item-title>{{ hourItem }}</v-list-item-title>
+                    </v-list-item>
+                </v-list>
+            </v-menu>
           </v-col>
           <v-col cols="6">
-            <v-select
-              v-model="selectedMinute"
-              :items="minutes"
-              label="Minutes"
-              density="compact"
-              variant="outlined"
-              hide-details
-              @update:modelValue="onTimeUpdate"
-              class="minute-select"
-            />
+            <v-menu :close-on-content-click="false" location="bottom right">
+                <template #activator="{ props: menuProps }">
+                    <v-text-field
+                        v-bind="menuProps"
+                        label="Minutes"
+                        v-model="selectedMinute"
+                        readonly
+                        density="compact"
+                        variant="outlined"
+                        hide-details
+                        class="minute-select"
+                    />
+                </template>
+                <v-list class="time-list">
+                    <v-list-item
+                        v-for="minuteItem in minutes"
+                        :key="minuteItem"
+                        :value="minuteItem"
+                        @click="selectMinute(minuteItem)"
+                        :class="{ 'v-list-item--active': selectedMinute === minuteItem }"
+                    >
+                        <v-list-item-title>{{ minuteItem }}</v-list-item-title>
+                    </v-list-item>
+                </v-list>
+            </v-menu>
           </v-col>
         </v-row>
       </v-card-text>
       <v-card-actions class="justify-end py-1">
-        <v-btn text @click="closeMenuAndEmit">OK</v-btn> </v-card-actions>
+        <v-btn text @click="closeMenuAndEmit">OK</v-btn>
+      </v-card-actions>
     </v-card>
   </v-menu>
 </template>
 
 <script setup>
 import { ref, watch, computed } from 'vue';
+import { format } from 'date-fns';
 
 const props = defineProps({
   label: { type: String, default: 'Until' },
@@ -68,76 +101,91 @@ const props = defineProps({
 });
 const emit = defineEmits(['update:modelValue']);
 
-const menu = ref(false);
-const selectedDate = ref(null);
-const selectedHour = ref(null);
-const selectedMinute = ref(null);
+const menu = ref(false); // Главное меню пикера
+const internalSelectedDate = ref(new Date()); 
+const selectedHour = ref('00');
+const selectedMinute = ref('00');
 
 const hours = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
 const minutes = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'));
 
 const displayValue = computed(() => {
-  if (selectedDate.value && selectedHour.value !== null && selectedMinute.value !== null) {
-    const dateStr = new Date(selectedDate.value).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-    return `${dateStr}, ${selectedHour.value}:${selectedMinute.value}`;
+  if (internalSelectedDate.value && !isNaN(internalSelectedDate.value.getTime())) {
+    const dateStr = format(internalSelectedDate.value, 'd MMMM');
+    const timeStr = `${String(selectedHour.value).padStart(2, '0')}:${String(selectedMinute.value).padStart(2, '0')}`;
+    return `${dateStr}, ${timeStr}`;
   }
-  return '';
+  return 'Select Date, 00:00';
 });
 
 watch(
   () => props.modelValue,
   (newValue) => {
-    if (typeof newValue === 'string' && newValue.includes('T')) {
-      const [datePart, timePart] = newValue.split('T');
-      selectedDate.value = datePart;
-      if (timePart && timePart.includes(':')) {
-        const [hour, minute] = timePart.split(':');
-        selectedHour.value = hour;
-        selectedMinute.value = minute;
+    if (newValue) {
+      const date = new Date(newValue);
+      if (!isNaN(date.getTime())) {
+        internalSelectedDate.value = date;
+        selectedHour.value = format(date, 'HH');
+        selectedMinute.value = format(date, 'mm');
+      } else {
+        const now = new Date();
+        internalSelectedDate.value = now;
+        selectedHour.value = format(now, 'HH');
+        selectedMinute.value = format(now, 'mm');
       }
     } else {
-      selectedDate.value = null;
-      selectedHour.value = null;
-      selectedMinute.value = null;
+      const now = new Date();
+      internalSelectedDate.value = now;
+      selectedHour.value = format(now, 'HH');
+      selectedMinute.value = format(now, 'mm');
     }
   },
   { immediate: true }
 );
 
-function onDatePicked() {
-  // When a date is picked, the time might not be set yet.
-  // We'll update the model value, but not close the menu yet.
+function onDatePicked(newDate) {
+  internalSelectedDate.value = newDate;
+  if (selectedHour.value === '00' && selectedMinute.value === '00') {
+    const now = new Date();
+    selectedHour.value = String(now.getHours()).padStart(2, '0');
+    selectedMinute.value = String(now.getMinutes()).padStart(2, '0');
+  }
   updateModelValue();
 }
 
-function onTimeUpdate() {
-  // When an hour or minute is picked, update the model value.
-  updateModelValue();
+// Новые функции для выбора часа и минуты
+function selectHour(hour) {
+    selectedHour.value = hour;
+    updateModelValue();
+}
+
+function selectMinute(minute) {
+    selectedMinute.value = minute;
+    updateModelValue();
 }
 
 function updateModelValue() {
-  if (selectedDate.value && selectedHour.value !== null && selectedMinute.value !== null) {
-    const datePart = new Date(selectedDate.value).toISOString().split('T')[0];
+  if (internalSelectedDate.value && !isNaN(internalSelectedDate.value.getTime())) {
+    const year = internalSelectedDate.value.getFullYear();
+    const month = String(internalSelectedDate.value.getMonth() + 1).padStart(2, '0');
+    const day = String(internalSelectedDate.value.getDate()).padStart(2, '0');
+    
+    const datePart = `${year}-${month}-${day}`;
     const timePart = `${String(selectedHour.value).padStart(2, '0')}:${String(selectedMinute.value).padStart(2, '0')}`;
+    
     emit('update:modelValue', `${datePart}T${timePart}`);
   } else {
     emit('update:modelValue', null);
   }
 }
 
-// New function to close the menu and ensure value is emitted
 function closeMenuAndEmit() {
-  updateModelValue(); // Ensure the latest value is emitted
-  menu.value = false; // Close the menu
+  updateModelValue();
+  menu.value = false;
 }
 </script>
 
 <style scoped>
-/* existing styles */
 .custom-datetime-menu {
   min-width: 380px !important;
   max-width: 450px !important;
@@ -152,13 +200,16 @@ function closeMenuAndEmit() {
   width: 100%;
 }
 
-.hour-select .v-input__control,
-.minute-select .v-input__control {
-  padding-left: 0px !important;
-  padding-right: 0px !important;
-}
-
 .hour-select, .minute-select {
   margin: 0px 4px;
+}
+
+/* Стили для новых списков времени */
+.time-list {
+    max-height: 200px; /* Ограничьте высоту списка */
+    overflow-y: auto; /* Добавьте прокрутку */
+}
+.time-list .v-list-item {
+    min-height: 36px; /* Чуть меньше стандартного для компактности */
 }
 </style>

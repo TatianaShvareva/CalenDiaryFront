@@ -85,7 +85,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { format } from 'date-fns';
 
@@ -133,23 +133,18 @@ const formattedSelectedDate = computed(() => {
   return format(dateObj, 'd MMMM yyyy');
 });
 
-watch([selectedDate, fromTime], ([newSelectedDate, newFromTime]) => {
-  if (!untilDateTime.value && newSelectedDate && newFromTime) {
-    const [hours, minutes] = newFromTime.split(':').map(Number);
-    const initialEndDate = new Date(newSelectedDate);
-    initialEndDate.setHours(hours + 1, minutes, 0, 0);
-    untilDateTime.value = format(initialEndDate, "yyyy-MM-dd'T'HH:mm");
-  }
-}, { immediate: true });
 
-const updateTimePickers = (dateString) => {
+const initializeTimesForNewEvent = (dateString) => {
   const dateObj = new Date(dateString);
   if (!isNaN(dateObj.getTime())) {
     const hour = String(dateObj.getHours()).padStart(2, '0');
     const minute = String(dateObj.getMinutes()).padStart(2, '0');
     fromTime.value = `${hour}:${minute}`;
-    const endHour = Math.min(23, dateObj.getHours() + 1);
-    untilDateTime.value = format(new Date(dateObj.setHours(endHour, dateObj.getMinutes(), 0, 0)), "yyyy-MM-dd'T'HH:mm");
+
+    // Для нового события, endTime по умолчанию на час позже startTime
+    const initialEndDate = new Date(dateString);
+    initialEndDate.setHours(dateObj.getHours() + 1, dateObj.getMinutes(), 0, 0);
+    untilDateTime.value = format(initialEndDate, "yyyy-MM-dd'T'HH:mm");
   } else {
     console.error('Failed to parse date for time pickers:', dateString);
     fromTime.value = '09:00';
@@ -159,7 +154,12 @@ const updateTimePickers = (dateString) => {
 
 function handleMiniCalendarDateClick(arg) {
   selectedDate.value = arg.dateStr;
-  updateTimePickers(arg.dateStr);
+  if (!isEditMode.value) {
+    // Только если это новое событие, инициализируем время
+    initializeTimesForNewEvent(arg.dateStr);
+  }
+  // В режиме редактирования, untilDateTime.value остается таким, каким его выбрал пользователь
+  // или каким оно было загружено из события.
 }
 
 const fetchAllEvents = async () => {
@@ -193,9 +193,11 @@ const loadEventForEdit = async (id) => {
       selectedDate.value = format(startDateTime, 'yyyy-MM-dd');
       fromTime.value = format(startDateTime, 'HH:mm');
     }
+    // **ВАЖНО: Устанавливаем untilDateTime из event.endTime**
     if (event.endTime) {
       untilDateTime.value = format(new Date(event.endTime), "yyyy-MM-dd'T'HH:mm");
     } else {
+      // Fallback: если endTime отсутствует (хотя не должно быть), устанавливаем час позже startTime
       if (event.startTime) {
         const startDateTime = new Date(event.startTime);
         const endDateTime = new Date(startDateTime.getTime() + 60 * 60 * 1000);
@@ -223,6 +225,8 @@ const saveEvent = async () => {
     alert('End time cannot be earlier than start time. Please adjust.');
     return;
   }
+
+  console.log('untilDateTime.value before saving:', untilDateTime.value);
 
   const eventPayload = {
     title: eventTitle.value,
@@ -268,19 +272,20 @@ const cancel = () => {
 };
 
 onMounted(async () => {
-  // Removed: await fetchLabels(); // No longer needed
-  await fetchAllEvents(); // Fetch all events for the sidebar on mount
+  await fetchAllEvents(); // Это для CalendarSidebar
 
   if (route.params.id) {
     eventId.value = route.params.id;
-    await loadEventForEdit(eventId.value);
+    await loadEventForEdit(eventId.value); // Загружаем все данные, включая untilDateTime
   } else if (route.params.date) {
     selectedDate.value = String(route.params.date);
-    updateTimePickers(selectedDate.value);
+    // Для нового события, инициализируем время начала и конца
+    initializeTimesForNewEvent(selectedDate.value);
     console.log('AddEditEventView: Initial selectedDate from route for creation:', selectedDate.value);
   } else {
     console.warn('AddEditEventView: No ID or date provided in route params. Using default today.');
-    updateTimePickers(selectedDate.value);
+    // Для нового события без даты, инициализируем время на сегодня
+    initializeTimesForNewEvent(selectedDate.value);
   }
 });
 </script>
