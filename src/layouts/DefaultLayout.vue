@@ -3,7 +3,6 @@
     <v-app-bar app color="surface" flat class="border-b">
       <v-container class="d-flex align-center py-0">
         <v-img :src="appLogo" alt="CalenDiary App Logo" max-height="40" max-width="40" contain class="mr-2"></v-img>
-
         <span class="text-h6 font-weight-bold text-on-surface mr-4">CalenDiary</span>
 
         <v-spacer></v-spacer>
@@ -12,19 +11,16 @@
 
         <div class="d-none d-sm-flex align-center">
           <v-btn variant="text" to="/" class="mx-1" color="on-surface">Home</v-btn>
-
           <v-btn v-if="authenticated" to="/calendars" color="primary" size="small" class="ml-2"
             append-icon="mdi-calendar">
             My Calendar
           </v-btn>
-
           <v-btn v-if="!authenticated" to="/registration" color="primary" size="small" class="ml-2">
             Register
           </v-btn>
           <v-btn v-if="!authenticated" to="/signin" color="secondary" size="small" class="ml-2">
             Sign In
           </v-btn>
-
           <v-btn v-if="authenticated" @click="handleLogout" color="error" size="small" class="ml-2" append-icon="mdi-logout">
             Logout
           </v-btn>
@@ -43,12 +39,10 @@
           <template v-slot:prepend><v-icon>mdi-home</v-icon></template>
           <v-list-item-title>Home</v-list-item-title>
         </v-list-item>
-
         <v-list-item v-if="authenticated" to="/calendars" link>
           <template v-slot:prepend><v-icon>mdi-calendar</v-icon></template>
           <v-list-item-title>My Calendar</v-list-item-title>
         </v-list-item>
-
         <v-list-item v-if="!authenticated" to="/registration" link>
           <template v-slot:prepend><v-icon>mdi-account-plus</v-icon></template>
           <v-list-item-title>Register</v-list-item-title>
@@ -94,7 +88,6 @@
           <template v-slot:prepend><v-icon>mdi-logout</v-icon></template>
           <v-list-item-title>Logout</v-list-item-title>
         </v-list-item>
-
       </v-list>
     </v-navigation-drawer>
 
@@ -215,55 +208,71 @@
 import { ref, computed } from 'vue';
 import { useStore } from 'vuex';
 import appLogo from '@/assets/app_logo.png';
-import { useRouter } from 'vue-router'; // Импортируем useRouter
+import { useRouter } from 'vue-router';
 
-const drawer = ref(false);
+// Reactive state for navigation drawer and dialog visibility
+const drawer = ref(false); 
+const guidedTourDialog = ref(false); 
+const tipOfTheDayDialog = ref(false); 
+const newFeaturesDialog = ref(false); 
+
+// Vuex store and Vue Router instances
 const store = useStore();
-const router = useRouter(); // Инициализация роутера
+const router = useRouter();
 
+// Computed property to check user authentication status from Vuex store
 const authenticated = computed(() => store.getters['auth/authenticated']);
 
-// Рефы для управления видимостью диалогов
-const guidedTourDialog = ref(false);
-const tipOfTheDayDialog = ref(false);
-const newFeaturesDialog = ref(false);
-
+/**
+ * Opens the guided tour dialog and closes the navigation drawer.
+ */
 const startGuidedTour = () => {
   guidedTourDialog.value = true;
-  drawer.value = false; // Закрываем навигационное меню при открытии диалога
+  drawer.value = false;
 };
 
+/**
+ * Confirms the start of the guided tour.
+ * Currently, it shows an alert but could navigate to a tour-specific page.
+ */
 const startTourConfirmed = () => {
   guidedTourDialog.value = false;
-  // Здесь могла бы быть более сложная логика начала тура
-  // Например, router.push('/a-special-tour-page');
-  // Для простоты, пока просто оповещение
   alert('Guided Tour functionality is under development!');
 };
 
+/**
+ * Opens the tip of the day dialog and closes the navigation drawer.
+ */
 const showTipOfTheDay = () => {
   tipOfTheDayDialog.value = true;
-  drawer.value = false; // Закрываем навигационное меню
+  drawer.value = false;
 };
 
+/**
+ * Opens the new features dialog and closes the navigation drawer.
+ */
 const showNewFeatures = () => {
   newFeaturesDialog.value = true;
-  drawer.value = false; // Закрываем навигационное меню
+  drawer.value = false;
 };
 
+/**
+ * Handles user logout: dispatches logout action to Vuex store and redirects to sign-in page.
+ */
 const handleLogout = () => {
   store.dispatch('auth/logout');
-  drawer.value = false;
-  router.push('/signin'); // Перенаправляем на страницу входа после выхода
+  drawer.value = false; 
+  router.push('/signin');
 };
 </script>
 
 <style scoped>
+
 .main-content-area {
-  background-color: transparent;
-  padding-top: 64px; /* Учитываем высоту app-bar */
-  padding-bottom: 120px; /* Учитываем высоту footer */
-  min-height: calc(100vh - (64px + 120px)); /* Занимаем оставшееся пространство */
+  background-color: transparent; 
+  padding-top: 64px; 
+  padding-bottom: 120px; 
+  min-height: calc(100vh - (64px + 120px)); 
   display: flex;
   justify-content: center;
   align-items: flex-start;

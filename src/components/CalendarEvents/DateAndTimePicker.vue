@@ -1,25 +1,25 @@
 <template>
   <v-menu
     v-model="menu"
-    :close-on-content-click="false" 
+    :close-on-content-click="false"
     transition="scale-transition"
     offset-y
     content-class="custom-datetime-menu"
   >
-    <template #activator="{ props }">
+    <template #activator="{ props: activatorProps }">
       <v-text-field
-        v-bind="props"
+        v-bind="activatorProps"
         :label="label"
         v-model="displayValue"
         readonly
         prepend-icon="mdi-calendar-clock"
         density="compact"
-        :variant="'outlined'"
+        variant="outlined"
       />
     </template>
     <v-card class="datetime-card">
       <v-date-picker
-        v-model="internalSelectedDate" 
+        v-model="internalSelectedDate"
         color="primary"
         @update:model-value="onDatePicked"
         width="100%"
@@ -95,29 +95,35 @@
 import { ref, watch, computed } from 'vue';
 import { format } from 'date-fns';
 
+// Define component properties and emitted events
 const props = defineProps({
   label: { type: String, default: 'Until' },
-  modelValue: { type: [String, Object, Date, null], default: null }
+  modelValue: { type: [String, Object, Date, null], default: null } 
 });
-const emit = defineEmits(['update:modelValue']);
+const emit = defineEmits(['update:modelValue']); 
 
-const menu = ref(false); // Главное меню пикера
+// Reactive state for the datetime picker component
+const menu = ref(false); 
 const internalSelectedDate = ref(new Date()); 
-const selectedHour = ref('00');
-const selectedMinute = ref('00');
+const selectedHour = ref('00'); 
+const selectedMinute = ref('00'); 
 
+// Arrays for hour and minute selection lists
 const hours = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
 const minutes = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'));
 
+// Computed property to format the selected date and time for display in the text field
 const displayValue = computed(() => {
   if (internalSelectedDate.value && !isNaN(internalSelectedDate.value.getTime())) {
     const dateStr = format(internalSelectedDate.value, 'd MMMM');
     const timeStr = `${String(selectedHour.value).padStart(2, '0')}:${String(selectedMinute.value).padStart(2, '0')}`;
     return `${dateStr}, ${timeStr}`;
   }
+ 
   return 'Select Date, 00:00';
 });
 
+// Watcher to synchronize internal state with external `modelValue` prop
 watch(
   () => props.modelValue,
   (newValue) => {
@@ -128,46 +134,62 @@ watch(
         selectedHour.value = format(date, 'HH');
         selectedMinute.value = format(date, 'mm');
       } else {
+       
         const now = new Date();
         internalSelectedDate.value = now;
         selectedHour.value = format(now, 'HH');
         selectedMinute.value = format(now, 'mm');
       }
     } else {
+      
       const now = new Date();
       internalSelectedDate.value = now;
       selectedHour.value = format(now, 'HH');
       selectedMinute.value = format(now, 'mm');
     }
   },
-  { immediate: true }
+  { immediate: true } // Run the watcher immediately upon component mounting
 );
 
+/**
+ * Handles the event when a new date is selected from the v-date-picker.
+ * If hour/minute are default '00:00', updates them to current time.
+ */
 function onDatePicked(newDate) {
   internalSelectedDate.value = newDate;
+  // If time hasn't been explicitly set, use current time
   if (selectedHour.value === '00' && selectedMinute.value === '00') {
     const now = new Date();
     selectedHour.value = String(now.getHours()).padStart(2, '0');
     selectedMinute.value = String(now.getMinutes()).padStart(2, '0');
   }
-  updateModelValue();
+  updateModelValue(); // Update the v-model binding
 }
 
-// Новые функции для выбора часа и минуты
+/**
+ * Updates the selected hour and triggers model value update.
+ */
 function selectHour(hour) {
     selectedHour.value = hour;
     updateModelValue();
 }
 
+/**
+ * Updates the selected minute and triggers model value update.
+ */
 function selectMinute(minute) {
     selectedMinute.value = minute;
     updateModelValue();
 }
 
+/**
+ * Constructs the final date-time string in ISO 8601 format (YYYY-MM-DDTHH:mm)
+ * and emits it via the 'update:modelValue' event.
+ */
 function updateModelValue() {
   if (internalSelectedDate.value && !isNaN(internalSelectedDate.value.getTime())) {
     const year = internalSelectedDate.value.getFullYear();
-    const month = String(internalSelectedDate.value.getMonth() + 1).padStart(2, '0');
+    const month = String(internalSelectedDate.value.getMonth() + 1).padStart(2, '0'); // Month is 0-indexed
     const day = String(internalSelectedDate.value.getDate()).padStart(2, '0');
     
     const datePart = `${year}-${month}-${day}`;
@@ -175,10 +197,13 @@ function updateModelValue() {
     
     emit('update:modelValue', `${datePart}T${timePart}`);
   } else {
-    emit('update:modelValue', null);
+    emit('update:modelValue', null); 
   }
 }
 
+/**
+ * Closes the main date picker menu and ensures the model value is updated.
+ */
 function closeMenuAndEmit() {
   updateModelValue();
   menu.value = false;
@@ -186,6 +211,7 @@ function closeMenuAndEmit() {
 </script>
 
 <style scoped>
+/* Specific styling for the custom datetime picker menu container */
 .custom-datetime-menu {
   min-width: 380px !important;
   max-width: 450px !important;
@@ -204,12 +230,11 @@ function closeMenuAndEmit() {
   margin: 0px 4px;
 }
 
-/* Стили для новых списков времени */
 .time-list {
-    max-height: 200px; /* Ограничьте высоту списка */
-    overflow-y: auto; /* Добавьте прокрутку */
+    max-height: 200px; 
+    overflow-y: auto; 
 }
 .time-list .v-list-item {
-    min-height: 36px; /* Чуть меньше стандартного для компактности */
+    min-height: 36px;
 }
 </style>

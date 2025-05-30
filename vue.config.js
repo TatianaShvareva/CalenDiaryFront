@@ -1,4 +1,3 @@
-// vue.config.js
 const { defineConfig } = require('@vue/cli-service');
 
 module.exports = defineConfig({
@@ -10,5 +9,5 @@ module.exports = defineConfig({
       },
     },
   },
-  // Дополнительные настройки, если у вас были
+
 });

@@ -1,41 +1,45 @@
-// C:\Users\human\.vscode\CalenDiaryFront\calendiary-frontend\src\store\auth.js
+// Vuex module for authentication, handling user login, registration, and session management.
 
 import authService from '@/services/authService';
 import router from '@/router';
-// import { jwtDecode } from 'jwt-decode'; // <-- Раскомментировать, если решите декодировать JWT для email (пока не требуется)
+// import { jwtDecode } from 'jwt-decode'; // Uncomment if JWT decoding is needed for user data
 
-// НОВАЯ КОНСТАНТА ДЛЯ GITHUB OAUTH2
-const OAUTH2_GITHUB_AUTH_URL = 'http://localhost:8001/oauth2/authorization/github'; // URL для начала GitHub OAuth2 потока
-// Убедитесь, что этот URL правильный и соответствует вашему бэкенду.
+// GitHub OAuth2 authorization URL
+const OAUTH2_GITHUB_AUTH_URL = 'http://localhost:8001/oauth2/authorization/github';
 
 const authModule = {
-  namespaced: true,
+  namespaced: true, // Ensures the module is self-contained with its own namespace
 
   state: {
-    jwtToken: localStorage.getItem('jwt') || null, // Store a single JWT
-    isAuthenticated: !!localStorage.getItem('jwt'), // Initialize from localStorage
+    jwtToken: localStorage.getItem('jwt') || null, // Stores JWT token
+    isAuthenticated: !!localStorage.getItem('jwt'), // Authentication status
     user: {
       id: localStorage.getItem('userId') || null,
-      name: localStorage.getItem('userName') || null, // Added 'name' to user state
+      name: localStorage.getItem('userName') || null,
       email: localStorage.getItem('userEmail') || null,
       role: localStorage.getItem('userRole') || null,
     },
-    signInError: null,
-    registrationError: null,
+    signInError: null, // Error message for sign-in attempts
+    registrationError: null, // Error message for registration attempts
   },
 
   getters: {
     authenticated: (state) => state.isAuthenticated,
     jwtToken: (state) => state.jwtToken,
-    user: (state) => state.user, // Returns user object {id, name, email, role}
+    user: (state) => state.user, // Returns the full user object
     signInError: (state) => state.signInError,
     registrationError: (state) => state.registrationError,
-    userName: (state) => state.user.name, // Getter for user's name
+    userName: (state) => state.user.name,
     userId: (state) => state.user.id,
     userRole: (state) => state.user.role,
   },
 
   mutations: {
+    /**
+     * Sets authentication data (token and user info) and updates localStorage.
+     * @param {Object} state - Vuex state.
+     * @param {Object} payload - Contains 'token' string and 'user' object.
+     */
     SET_AUTH_DATA(state, { token, user }) {
       state.jwtToken = token;
       state.isAuthenticated = !!token;
@@ -48,17 +52,18 @@ const authModule = {
 
       if (user) {
         state.user.id = user.id;
-        state.user.name = user.name; // Set user's name
+        state.user.name = user.name;
         state.user.email = user.email;
         state.user.role = user.role || 'USER'; // Default role
         localStorage.setItem('userId', user.id);
-        localStorage.setItem('userName', user.name); // Store user's name in localStorage
+        localStorage.setItem('userName', user.name);
         localStorage.setItem('userEmail', user.email);
         localStorage.setItem('userRole', user.role || 'USER');
       } else {
-        state.user = { id: null, name: null, email: null, role: null }; // Reset user state
+        // Clear user data if no user object provided
+        state.user = { id: null, name: null, email: null, role: null };
         localStorage.removeItem('userId');
-        localStorage.removeItem('userName'); // Remove user's name from localStorage
+        localStorage.removeItem('userName');
         localStorage.removeItem('userEmail');
         localStorage.removeItem('userRole');
       }
@@ -73,23 +78,31 @@ const authModule = {
       state.signInError = null;
       state.registrationError = null;
     },
+    /**
+     * Clears all authentication data from state and localStorage.
+     */
     LOGOUT(state) {
       state.jwtToken = null;
       state.isAuthenticated = false;
-      state.user = { id: null, name: null, email: null, role: null }; // Reset user state on logout
+      state.user = { id: null, name: null, email: null, role: null };
       localStorage.clear(); // Clear all localStorage for a clean state
     },
   },
 
   actions: {
+    /**
+     * Registers a new user and attempts to log them in directly.
+     * @param {Object} commit - Vuex commit function.
+     * @param {Object} userData - User registration details (e.g., name, email, password).
+     */
     async insertUser({ commit }, userData) {
-      commit('CLEAR_AUTH_ERRORS'); // Clear previous errors
+      commit('CLEAR_AUTH_ERRORS');
 
       try {
         const responseData = await authService.register(userData);
 
-        // Если бэкенд возвращает токен и данные пользователя после регистрации (объект)
         if (responseData && responseData.token) {
+          // If backend returns token and user data upon registration
           commit('SET_AUTH_DATA', {
             token: responseData.token,
             user: {
@@ -102,39 +115,34 @@ const authModule = {
           alert('Registration successful! You are now logged in.');
           router.push('/calendars');
         } else {
-          // Если регистрация успешна, но токен не был возвращен (например, просто сообщение или статус)
+          // If registration is successful but no token is returned (e.g., just a message)
           alert('Registration successful! Please sign in.');
           router.push('/signin');
         }
       } catch (error) {
         console.error('Registration failed:', error.response || error);
         let errorMessage = 'An unexpected error occurred during registration.';
-        if (error.response && error.response.data) {
-          if (typeof error.response.data === 'object' && error.response.data.message) {
-            errorMessage = error.response.data.message;
-          } else if (typeof error.response.data === 'string') {
-            errorMessage = error.response.data;
-          } else if (error.response.data.errors) {
-            errorMessage = Object.values(error.response.data.errors).flat().join('\n');
-          }
+        if (error.response?.data) {
+          errorMessage = error.response.data.message || JSON.stringify(error.response.data);
+        } else if (error.message) {
+          errorMessage = error.message;
         }
         commit('SET_REGISTRATION_ERROR', errorMessage);
-        throw error;
+        throw error; // Re-throw to allow component to catch
       }
     },
 
+    /**
+     * Attempts to sign in a user with provided credentials.
+     * @param {Object} commit - Vuex commit function.
+     * @param {Object} credentials - User login credentials (email, password).
+     */
     async signIn({ commit }, credentials) {
       commit('CLEAR_AUTH_ERRORS');
 
       try {
-        // authService.login теперь возвращает ТОЛЬКО строку токена
-        const token = await authService.login(credentials);
-
-        // В этом сценарии (бэкенд возвращает только токен),
-        // данных пользователя мы не получаем вместе с логином.
-        // Поэтому 'user' будет null. Если нужны данные пользователя,
-        // придется делать отдельный запрос или декодировать токен (если он их содержит).
-        const user = null; // Или, если токен содержит данные пользователя, декодировать его.
+        const token = await authService.login(credentials); // authService returns only token string
+        const user = null; // Backend might not send user details with login response for now
 
         if (token && typeof token === 'string' && token.length > 0) {
           commit('SET_AUTH_DATA', { token: token, user: user });
@@ -148,55 +156,60 @@ const authModule = {
       } catch (error) {
         console.error('Sign In failed:', error.response || error);
         let errorMessage = 'Invalid credentials or an unexpected error occurred.';
-        if (error.response && error.response.data) {
-          // Здесь ожидаем, что error.response.data будет объектом с полем 'message',
-          // так как ваш бэкенд возвращает { "code": 401, "message": "Invalid credentials", ... }
+        if (error.response?.data) {
           errorMessage = error.response.data.message || JSON.stringify(error.response.data);
         } else if (error.message) {
           errorMessage = error.message;
         }
         commit('SET_SIGN_IN_ERROR', errorMessage);
-        // Не бросаем ошибку дальше, чтобы показать её пользователю через alert/UI
-        // throw error; // Если вам нужно, чтобы компонент тоже обработал ошибку, раскомментируйте
+        // Do not re-throw here if you want the error to be handled primarily by the state.
       }
     },
 
+    /**
+     * Logs out the user by clearing local authentication data and calling backend logout (if applicable).
+     * @param {Object} commit - Vuex commit function.
+     */
     logout({ commit }) {
       commit('LOGOUT');
-      authService.logoutBackend(); // Вызываем эндпоинт на бэкенде для логаута (если есть)
+      authService.logoutBackend(); // Call backend logout endpoint if it exists
       alert('Logged out successfully!');
-      router.push('/'); // После выхода можно перенаправить на главную или на страницу входа
+      router.push('/'); // Redirect to home or sign-in page after logout
     },
 
-    // НОВЫЙ ЭКШЕН: для запуска процесса аутентификации через GitHub OAuth2
+    /**
+     * Initiates the GitHub OAuth2 login flow by redirecting the user to the GitHub authorization URL.
+     */
     initiateGithubLogin() {
-      // Просто перенаправляем пользователя на URL авторизации GitHub OAuth2
       window.location.href = OAUTH2_GITHUB_AUTH_URL;
     },
 
-    // НОВЫЙ ЭКШЕН: для обработки редиректа после успешной аутентификации через OAuth2
-    // Этот экшен будет вызываться из router/index.js после редиректа от GitHub
+    /**
+     * Handles the redirect after successful OAuth2 authentication.
+     * Extracts token and user data from URL parameters and sets authentication state.
+     * @param {Object} commit - Vuex commit function.
+     * @param {URLSearchParams} urlParams - URLSearchParams object containing parameters from the redirect.
+     */
     async handleOAuth2Redirect({ commit }, urlParams) {
       commit('CLEAR_AUTH_ERRORS');
       try {
         const token = urlParams.get('token');
         const id = urlParams.get('id');
-        const name = urlParams.get('username'); // Backend часто возвращает 'username'
+        const name = urlParams.get('username'); // Assuming backend provides 'username'
         const email = urlParams.get('email');
         const role = urlParams.get('role');
 
         if (token) {
-          // Устанавливаем токен и данные пользователя, полученные из URL
           commit('SET_AUTH_DATA', {
             token: token,
-            user: { id, name, email, role: role || 'USER' } // Убедимся, что роль по умолчанию 'USER'
+            user: { id, name, email, role: role || 'USER' }
           });
           alert('Login via GitHub successful!');
-          router.push('/calendars'); // Перенаправляем на страницу календаря
+          router.push('/calendars');
         } else {
           console.error('OAuth2 redirect URL did not contain a token.');
           alert('GitHub login failed: No token received.');
-          router.push('/signin'); // Если токена нет, что-то пошло не так, перенаправляем на логин
+          router.push('/signin');
         }
       } catch (error) {
         console.error('Error handling OAuth2 redirect:', error);

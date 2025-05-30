@@ -55,18 +55,20 @@ import { mapState } from 'vuex';
 import { VContainer, VRow, VCol, VCard, VCardTitle, VForm, VTextField, VBtn, VAlert, VCardActions } from 'vuetify/components';
 
 export default {
-  name: 'RegistrationView', // Переименовал на RegistrationView для консистентности
+  name: 'RegistrationView', // Component name for consistency
   components: {
-    VContainer, VRow, VCol, VCard, VCardTitle, VForm, VTextField, VBtn, VAlert, VCardActions, // Добавил VCardActions
+    VContainer, VRow, VCol, VCard, VCardTitle, VForm, VTextField, VBtn, VAlert, VCardActions,
   },
   data() {
     return {
+      // Data model for registration form inputs
       data: {
         name: '',
         email: '',
         password: '',
       },
-      errors: { // For frontend validation
+      // Local validation error messages
+      errors: {
         name: '',
         email: '',
         password: '',
@@ -74,65 +76,64 @@ export default {
     };
   },
   computed: {
+    // Map Vuex state properties from the 'auth' module
     ...mapState('auth', ['isAuthenticated', 'registrationError']),
   },
   methods: {
+    /**
+     * Performs client-side validation on the registration form fields.
+     * @returns {boolean} True if the form is valid, false otherwise.
+     */
     validateForm() {
       let valid = true;
-      this.errors = {
-        name: '', email: '', password: '',
-      };
+      this.errors = { name: '', email: '', password: '' }; // Reset errors
 
       if (!this.data.name) {
-        this.errors.name = 'Name is required.';
-        valid = false;
+        this.errors.name = 'Name is required.'; valid = false;
       } else if (this.data.name.length < 2) {
-        this.errors.name = 'Name must be at least 2 characters.';
-        valid = false;
+        this.errors.name = 'Name must be at least 2 characters.'; valid = false;
       } else if (this.data.name.length > 50) {
-        this.errors.name = 'Name must be less than 50 characters.';
-        valid = false;
+        this.errors.name = 'Name must be less than 50 characters.'; valid = false;
       }
 
       if (!this.data.email) {
-        this.errors.email = 'Email is required.';
-        valid = false;
+        this.errors.email = 'Email is required.'; valid = false;
       } else if (!/\S+@\S+\.\S+/.test(this.data.email)) {
-        this.errors.email = 'Email must be valid.';
-        valid = false;
+        this.errors.email = 'Email must be valid.'; valid = false;
       }
 
       if (!this.data.password) {
-        this.errors.password = 'Password is required.';
-        valid = false;
+        this.errors.password = 'Password is required.'; valid = false;
       } else if (this.data.password.length < 8) {
-        this.errors.password = 'Password must be at least 8 characters.';
-        valid = false;
+        this.errors.password = 'Password must be at least 8 characters.'; valid = false;
       }
       return valid;
     },
 
+    /**
+     * Handles user registration: validates form and dispatches 'insertUser' action to Vuex store.
+     * Clears previous authentication errors before attempting registration.
+     */
     async registerUser() {
-      this.$store.commit('auth/CLEAR_AUTH_ERRORS');
+      this.$store.commit('auth/CLEAR_AUTH_ERRORS'); // Clear any previous auth errors
       if (this.validateForm()) {
         try {
           await this.$store.dispatch('auth/insertUser', this.data);
-          // После успешной регистрации (которая, как мы помним, логинит пользователя),
-          // перенаправление на '/' уже происходит в auth/insertUser action.
-          // Если бы не логинил, то здесь можно было бы добавить this.$router.push('/signin');
+          // Redirection upon successful registration (if user is logged in) is handled by the Vuex action.
         } catch (error) {
+          // Error already set in Vuex 'registrationError' state, no need to set here.
           console.log('Registration dispatch failed in component (expected for invalid data or backend issues).');
-          // Ошибка уже установлена в registrationError через Vuex
         }
       }
     },
   },
   mounted() {
+ 
     this.$store.commit('auth/CLEAR_AUTH_ERRORS');
   },
 };
 </script>
 
 <style scoped>
-/* Component-specific styles can be added here */
+
 </style>

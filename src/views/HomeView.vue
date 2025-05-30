@@ -9,7 +9,5 @@ import HomePageContent from '@/components/HomePageContent.vue';
 </script>
 
 <style scoped>
-.home-view {
-  /* Удалены все закомментированные стили */
-}
+
 </style>

@@ -1,26 +1,28 @@
-// src/api/mainApi.js (для взаимодействия с основным бэкендом: /calendar, /labels)
+// src/api/mainApi.js
+// This module provides an Axios instance for interacting with the main backend API.
+// It handles JWT token injection for authenticated requests and global error handling.
+
 import axios from 'axios';
-//import { API_BASE_URL } from '@/config/apiConfig'; // Импортируем из нового файла
-import store from '@/store/store';
-import router from '@/router';
+import store from '@/store/store'; 
+import router from '@/router';   
 
-const API_BASE_URL = 'http://localhost:8002'
+// Base URL for the main application API.
+const API_BASE_URL = 'http://localhost:8002';
 
+// Create an Axios instance for the main API.
 const mainApi = axios.create({
-  baseURL: API_BASE_URL, // Используем URL основного API
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Перехватчик запросов: добавляем JWT-токен авторизации
+// Request Interceptor: Attaches JWT Authorization token to outgoing requests.
+// This ensures that all requests to the main API (which are typically authenticated)
+// include the necessary token from the Vuex store.
 mainApi.interceptors.request.use(
   (config) => {
     const token = store.getters['auth/jwtToken'];
-    // Здесь мы всегда добавляем токен, если он есть, так как это
-    // основной API, и большинство его эндпоинтов аутентифицированы.
-    // Исключения (no-auth эндпоинты) будут обрабатываться по-другому,
-    // см. ниже в сервисах.
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -31,17 +33,19 @@ mainApi.interceptors.request.use(
   }
 );
 
-// Перехватчик ответов: обрабатываем ошибки, особенно 401 (Unauthorized)
+// Response Interceptor: Handles API responses, especially for unauthorized (401) or forbidden (403) errors.
+// If a 401/403 status is received, it triggers a logout process and redirects the user to the sign-in page,
+// unless the current route is already sign-in or registration.
 mainApi.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-      console.warn('Unauthorized or Forbidden access to Main API. Logging out...');
-      // Если это не страницы входа/регистрации (чтобы избежать бесконечного редиректа)
+      console.warn('Unauthorized or Forbidden access to Main API. Initiating logout and redirect.');
       const currentRouteName = router.currentRoute.value.name;
+      
       if (currentRouteName !== 'signin' && currentRouteName !== 'registration') {
-        store.dispatch('auth/logout'); // Разлогиниваем
-        router.push('/signin'); // Перенаправляем на страницу входа
+        store.dispatch('auth/logout'); 
+        router.push('/signin');       
       }
     }
     return Promise.reject(error);
@@ -49,3 +53,42 @@ mainApi.interceptors.response.use(
 );
 
 export default mainApi;
+
+/**
+ * Common Main API Endpoints (examples):
+ *
+ * @endpoint GET /calendars
+ * - Description: Retrieves a list of calendars for the authenticated user.
+ * - Response: [{ id, name, color, ... }]
+ *
+ * @endpoint POST /calendars
+ * - Description: Creates a new calendar.
+ * - Request Body: { name, color }
+ *
+ * @endpoint PUT /calendars/{calendarId}
+ * - Description: Updates an existing calendar.
+ * - Request Body: { name, color }
+ *
+ * @endpoint DELETE /calendars/{calendarId}
+ * - Description: Deletes a specific calendar.
+ *
+ * @endpoint GET /events
+ * - Description: Retrieves events based on filters (e.g., date range, calendar ID).
+ * - Query Params: startDate, endDate, calendarId
+ * - Response: [{ id, title, start, end, ... }]
+ *
+ * @endpoint POST /events
+ * - Description: Creates a new event.
+ * - Request Body: { title, description, start, end, allDay, calendarId }
+ *
+ * @endpoint PUT /events/{eventId}
+ * - Description: Updates an existing event.
+ * - Request Body: { title, description, start, end, allDay, calendarId }
+ *
+ * @endpoint DELETE /events/{eventId}
+ * - Description: Deletes a specific event.
+ *
+ * @endpoint GET /labels
+ * - Description: Retrieves available event labels/categories.
+ * - Response: [{ id, name, color }]
+ */

@@ -75,11 +75,10 @@ const rules = {
 };
 
 const submitFeedback = () => {
-  // Здесь будет логика для отправки формы (например, вызов API)
-  // Пока что просто alert
+ 
   if (rules.email(feedbackEmail.value) === true && rules.required(feedbackMessage.value) === true) {
     alert(`Thank you for your feedback, ${feedbackName.value || 'Anonymous'}! Your message: "${feedbackMessage.value}"`);
-    // Очистить форму
+   
     feedbackName.value = '';
     feedbackEmail.value = '';
     feedbackMessage.value = '';
@@ -90,5 +89,5 @@ const submitFeedback = () => {
 </script>
 
 <style scoped>
-/* Ваши стили для страницы */
+
 </style>

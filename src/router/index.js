@@ -1,19 +1,21 @@
-// C:\Users\human\.vscode\CalenDiaryFront\calendiary-frontend\src\router\index.js
+// src/router/index.js
+// Configures Vue Router for the CalenDiary application, defining routes and navigation guards.
 
 import { createRouter, createWebHistory } from 'vue-router';
 import HomeView from '@/views/HomeView.vue';
 import Registration from '@/views/login/Registration.vue';
 import SignIn from '@/views/login/SignIn.vue';
 import CalendarsView from '@/views/CalendarsView.vue';
-import AddEditEventView from '@/views/CalendarEvents/AddEditEventView.vue'; // <-- Убедитесь, что это правильный путь
-import store from '@/store/store';
+import AddEditEventView from '@/views/CalendarEvents/AddEditEventView.vue'; 
+import store from '@/store/store'; 
 
-// НОВЫЕ ИМПОРТЫ для страниц информации
+// Information pages
 import PrivacyPolicyView from '@/views/Information/PrivacyPolicyView.vue';
 import FAQView from '@/views/Information/FAQView.vue';
 import AboutView from '@/views/Information/AboutView.vue';
 import ContactUsView from '@/views/Information/ContactUsView.vue';
 
+// Define all application routes
 const routes = [
   {
     path: '/',
@@ -34,84 +36,85 @@ const routes = [
     path: '/calendars',
     name: 'calendars',
     component: CalendarsView,
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: true }, // Requires user to be authenticated
   },
   {
-    // Маршрут для ДОБАВЛЕНИЯ события
-    path: '/add-event/:date?', // :date? делает параметр необязательным
+    // Route for adding a new event (date parameter is optional)
+    path: '/add-event/:date?',
     name: 'add-event',
-    component: AddEditEventView, // <-- Указываем на ваш универсальный компонент
-    props: true, // Передаем параметры маршрута как пропсы компоненту
+    component: AddEditEventView,
+    props: true, // Pass route params as component props
     meta: { requiresAuth: true }
   },
   {
-    // Маршрут для РЕДАКТИРОВАНИЯ события
-    path: '/edit-event/:id', // <-- НОВЫЙ МАРШРУТ для редактирования
+    // Route for editing an existing event (requires event ID)
+    path: '/edit-event/:id',
     name: 'edit-event',
-    component: AddEditEventView, // <-- ТОЖЕ Указываем на ваш универсальный компонент
-    props: true, // Передаем ID как пропс (или можно получить через useRoute().params.id)
+    component: AddEditEventView,
+    props: true, // Pass ID as prop
     meta: { requiresAuth: true }
   },
   {
+    // OAuth2 redirect handler route
     path: '/oauth-success',
     name: 'oauth2Redirect',
     beforeEnter: (to, from, next) => {
       const urlParams = new URLSearchParams(window.location.search);
       store.dispatch('auth/handleOAuth2Redirect', urlParams)
         .then(() => {
-          // Если handleOAuth2Redirect уже делает router.push('/calendars'), то здесь ничего не нужно
-          // В противном случае, добавьте: next('/calendars');
+          // The auth/handleOAuth2Redirect action typically handles the navigation
+          // to '/calendars' upon successful authentication.
         })
         .catch(() => {
-          next('/signin');
+          next('/signin'); // Redirect to sign-in on OAuth failure
         });
     },
-    component: { template: '<div></div>' },
+    component: { template: '<div></div>' }, // A dummy component as navigation is handled in beforeEnter
     meta: { requiresAuth: false }
   },
 
-  // НОВЫЕ МАРШРУТЫ ДЛЯ ИНФОРМАЦИИ - ДОБАВЛЯЕМ СЮДА
+  // Routes for informational pages (do not require authentication)
   {
     path: '/privacy',
     name: 'privacy',
     component: PrivacyPolicyView,
-    meta: { requiresAuth: false } // Эти страницы, скорее всего, не требуют аутентификации
+    meta: { requiresAuth: false }
   },
   {
     path: '/faq',
     name: 'faq',
     component: FAQView,
-    meta: { requiresAuth: false } // Эти страницы, скорее всего, не требуют аутентификации
+    meta: { requiresAuth: false }
   },
   {
     path: '/about',
     name: 'about',
     component: AboutView,
-    meta: { requiresAuth: false } // Эти страницы, скорее всего, не требуют аутентификации
+    meta: { requiresAuth: false }
   },
   {
-    path: '/contact-us', // Путь, по которому будет доступна страница
-    name: 'contact-us', // Уникальное имя маршрута
-    component: ContactUsView, // Вот здесь мы используем импортированный компонент!
-    meta: { requiresAuth: false } // Эта страница, скорее всего, не требует аутентификации
+    path: '/contact-us',
+    name: 'contact-us',
+    component: ContactUsView,
+    meta: { requiresAuth: false }
   },
 ];
-
 
 const router = createRouter({
   history: createWebHistory(process.env.BASE_URL),
   routes
 });
 
+// Global navigation guard to check authentication for routes with `requiresAuth` meta field
 router.beforeEach(async (to, from, next) => {
   if (to.matched.some(record => record.meta.requiresAuth)) {
     if (!store.getters['auth/authenticated']) {
-      next({ name: 'signin' });
+      next({ name: 'signin' }); // Redirect to sign-in if not authenticated
     } else {
-      next();
+      next(); // Proceed if authenticated
     }
   } else {
-    next();
+    next(); // Always allow access to non-authenticated routes
   }
 });
 

@@ -1,292 +1,339 @@
-// C:\Users\human\.vscode\CalenDiaryFront\calendiary-frontend\src\store\folder.js
-// ИСПРАВЛЕНИЕ: Импортируем mainApi для запросов, требующих аутентификации
-import axios from '@/api/mainApi'; // <--- ИСПРАВЛЕНО
+// Vuex module for managing user folders and their associated content.
 
-/* eslint-disable */ // Пока оставлю, если есть другие ошибки ESLint
+import axios from '@/api/mainApi'; // Authenticated Axios instance for main API calls
+
+/* eslint-disable no-unused-vars */ // Keeping this for now if other ESLint issues persist
+
 const state = {
-    folderId: null,
-    title: null,
-    userId: null,
-    contents: {},
+  folderId: null,
+  title: null,
+  userId: null,
+  contents: {}, // Stores contents associated with the current folder
 
-    errorFolderId: null,
-    folderStatus: null,
-    requestStatus: null,
-    errorStatus: null,
+  // Status and error messages
+  errorFolderId: null,
+  folderStatus: null,
+  requestStatus: null,
+  errorStatus: null,
 };
 
 const mutations = {
-    findFolderById(state, folderData) {
-        state.folderId = folderData.folderId
-        state.title = folderData.title
-        state.userId = folderData.userId
-        state.contents = folderData.contentIds
-        state.requestStatus = folderData.status
-        state.folderStatus = null
-        state.errorFolderId = null
-    },
-    folderStatus(state, folderID) {
-        state.folderStatus = "No folder with ID number: " + folderID
-        state.errorFolderId = null
-    },
-    requestStatus(state, status) {
-        state.requestStatus = status
-    },
-    // Исправлена мутация: она должна принимать только 2 аргумента
-    errorFolderId(state, payload) { // <--- ИСПРАВЛЕНО: мутация принимает (state, payload)
-        const { errorStatus, folderId } = payload; // Деструктурируем payload
-        state.errorFolderId = "Please use digits. Folder ID: " + folderId + " Request status: " + errorStatus
-        state.folderStatus = null
-    },
-    updated(state, folderData) {
-        console.log('folder.js -> mutation -> update')
-        state.folderId = folderData.folderId;
-        state.title = folderData.title;
-        state.userId = folderData.userId;
-        state.requestStatus = folderData.status;
-    },
-    deleteFolder(state, status) {
-        console.log('folder.js -> mutation -> delete');
-        state.folderId = null;
-        state.title = null;
-        state.userId = null;
-        state.contents = {};
-        state.requestStatus = status;
-    },
-
-    insertFolderData(state, folderData) {
-        state.folderId = folderData.folderId
-        state.title = folderData.title
-        state.userId = folderData.userId
-        state.contents = folderData.contents
-        state.requestStatus = folderData.status
-    },
-    changeFolderId(state, folderId) {
-        state.folderId = folderId
-    },
-
-    getContents(state, data) {
-        state.contents = {}
-        for (let i in data.responseData) {
-            let content = {
-                "id": data.responseData[i].contentId,
-                "title": data.responseData[i].title,
-                "content": data.responseData[i].content,
-                "file": data.responseData[i].file,
-                "path": data.responseData[i].filePath,
-                "published": data.responseData[i].publishedOn
-            }
-            state.contents[i] = content
-        }
-        state.requestStatus = data.status
-        state.folderId = data.folderId
-        state.userId = data.userId
-    },
+  /**
+   * Sets the state with data for a found folder.
+   * @param {Object} state - The Vuex state.
+   * @param {Object} folderData - The folder data object.
+   */
+  findFolderById(state, folderData) {
+    state.folderId = folderData.folderId;
+    state.title = folderData.title;
+    state.userId = folderData.userId;
+    state.contents = folderData.contentIds;
+    state.requestStatus = folderData.status;
+    state.folderStatus = null;
+    state.errorFolderId = null;
+  },
+  /**
+   * Sets a status message when a folder with a specific ID is not found.
+   * @param {Object} state - The Vuex state.
+   * @param {string} folderID - The ID of the folder not found.
+   */
+  folderStatus(state, folderID) {
+    state.folderStatus = "No folder with ID number: " + folderID;
+    state.errorFolderId = null;
+  },
+  /**
+   * Sets the general request status.
+   * @param {Object} state - The Vuex state.
+   * @param {string} status - The status message.
+   */
+  requestStatus(state, status) {
+    state.requestStatus = status;
+  },
+  /**
+   * Sets an error message for invalid folder IDs.
+   * @param {Object} state - The Vuex state.
+   * @param {Object} payload - Object containing `errorStatus` and `folderId`.
+   */
+  errorFolderId(state, payload) {
+    const { errorStatus, folderId } = payload;
+    state.errorFolderId = `Please use digits. Folder ID: ${folderId}. Request status: ${errorStatus}`;
+    state.folderStatus = null;
+  },
+  /**
+   * Updates folder data in the state after a successful update operation.
+   * @param {Object} state - The Vuex state.
+   * @param {Object} folderData - The updated folder data.
+   */
+  updated(state, folderData) {
+    console.log('folder.js -> mutation -> update');
+    state.folderId = folderData.folderId;
+    state.title = folderData.title;
+    state.userId = folderData.userId;
+    state.requestStatus = folderData.status;
+  },
+  /**
+   * Clears folder data from the state after a successful deletion.
+   * @param {Object} state - The Vuex state.
+   * @param {number} status - The HTTP status of the deletion request.
+   */
+  deleteFolder(state, status) {
+    console.log('folder.js -> mutation -> delete');
+    state.folderId = null;
+    state.title = null;
+    state.userId = null;
+    state.contents = {};
+    state.requestStatus = status;
+  },
+  /**
+   * Inserts new folder data into the state.
+   * @param {Object} state - The Vuex state.
+   * @param {Object} folderData - The folder data object.
+   */
+  insertFolderData(state, folderData) {
+    state.folderId = folderData.folderId;
+    state.title = folderData.title;
+    state.userId = folderData.userId;
+    state.contents = folderData.contents;
+    state.requestStatus = folderData.status;
+  },
+  /**
+   * Changes the current folder ID in the state.
+   * @param {Object} state - The Vuex state.
+   * @param {string} folderId - The new folder ID.
+   */
+  changeFolderId(state, folderId) {
+    state.folderId = folderId;
+  },
+  /**
+   * Populates the `contents` object with content data.
+   * @param {Object} state - The Vuex state.
+   * @param {Object} data - Contains `responseData`, `userId`, `folderId`, and `status`.
+   */
+  getContents(state, data) {
+    state.contents = {};
+    for (let i in data.responseData) {
+      let content = {
+        "id": data.responseData[i].contentId,
+        "title": data.responseData[i].title,
+        "content": data.responseData[i].content,
+        "file": data.responseData[i].file,
+        "path": data.responseData[i].filePath,
+        "published": data.responseData[i].publishedOn
+      };
+      state.contents[i] = content;
+    }
+    state.requestStatus = data.status;
+    state.folderId = data.folderId;
+    state.userId = data.userId;
+  },
 };
 
 const actions = {
-    async insertFolderData({ commit }, data) {
-        const folderDto = {
-            folderId: null,
-            title: data.title,
-            userId: data.userId
-        };
+  /**
+   * Inserts new folder data to the backend.
+   * @param {Object} commit - Vuex commit function.
+   * @param {Object} data - Folder data including title and userId.
+   */
+  async insertFolderData({ commit }, data) {
+    const folderDto = {
+      folderId: null, // ID will be generated by backend
+      title: data.title,
+      userId: data.userId
+    };
 
-        const formData = new FormData();
-        formData.append('folderDto', new Blob([JSON.stringify(folderDto)], { type: 'application/json' })); // <--- ИСПРАВЛЕНО
+    const formData = new FormData();
+    // Append the JSON DTO as a Blob with 'application/json' type
+    formData.append('folderDto', new Blob([JSON.stringify(folderDto)], { type: 'application/json' }));
 
-        let http = `/api/v1/users/${data.userId}/folders/add-folder`;
-        let response = await axios.post(http, formData, {
-            headers: {
-                // 'Content-Type': 'multipart/form-data' - Axios сам устанавливает его
-            }
-        })
-            .catch(error => {
-                console.error('Error during inserting the new FOLDER: ', error);
-                throw error;
-            })
-        if (!response) {
-            commit('requestStatus', 'error');
-            return;
-        }
-
+    let http = `/api/v1/users/${data.userId}/folders/add-folder`;
+    try {
+      let response = await axios.post(http, formData, {
+        // 'Content-Type': 'multipart/form-data' is automatically set by Axios for FormData
+      });
+      if (response.status >= 200 && response.status < 300) {
         let responseData = response.data;
-        if (response.status >= 200 && response.status < 300) {
-            let folderData = {
-                "folderId": responseData.folderId,
-                "title": responseData.title,
-                "userId": responseData.userId,
-                "contents": responseData.contents,
-                "status": response.status
-            }
-            commit('insertFolderData', folderData)
-        } else {
-            commit('requestStatus', response.status);
-        }
-    },
-    async updateFolder({ commit }, data) {
-        let http = `/api/v1/users/${data.userId}/folders/update/${data.folderId}`;
-        const folderDto = {
-            folderId: data.folderId,
-            title: data.title,
-            userId: data.userId
+        let folderData = {
+          "folderId": responseData.folderId,
+          "title": responseData.title,
+          "userId": responseData.userId,
+          "contents": responseData.contents,
+          "status": response.status
         };
-        const formData = new FormData();
-        formData.append('folderDto', new Blob([JSON.stringify(folderDto)], { type: 'application/json' })); // <--- ИСПРАВЛЕНО
-
-        let response = await axios.put(http, formData, {
-            headers: {
-                // 'Content-Type': 'multipart/form-data' - Axios сам устанавливает его
-            }
-        })
-            .catch(error => {
-                console.error('Error to update folder with id: ' + data.folderId, error);
-                throw error;
-            })
-        if (!response) {
-            commit('requestStatus', 'error');
-            return;
-        }
-
-        if (response.status >= 200 && response.status < 300) {
-            console.log(" folder.js -> action -> update folder -> response status -> " + response.status)
-            commit('updated', {
-                folderId: response.data.folderId,
-                title: response.data.title,
-                userId: response.data.userId,
-                status: response.status
-            });
-            commit('requestStatus', response.status)
-        } else {
-            commit('requestStatus', response.status);
-        }
-    },
-
-    updateFolderId({ commit }, folderId) {
-        commit('changeFolderId', folderId)
-    },
-
-    async findAllFolders({ commit }, userId) {
-        let http = `/api/v1/users/${userId}/folders/all`;
-        let response = await axios.get(http)
-            .catch(error => {
-                console.error('Error to show all folders: ', error);
-                throw error;
-            })
-        if (!response) {
-            return;
-        }
-
-        if (response.status == 200) {
-            console.log("All folders fetched:", response.data);
-            return response.data;
-        } else {
-            return null;
-        }
-    },
-
-    async findFolderById({ commit }, data) {
-        let http = `/api/v1/users/${data.userId}/folders/${data.folderId}`;
-        let response = await axios.get(http)
-            .catch(error => {
-                console.error('Error to find folder by id: ' + data.folderId, error);
-                throw error;
-            })
-        if (!response) {
-            commit('folderStatus', data.folderId);
-            return;
-        }
-
-        let responseData = response.data;
-        if (response.status == 200) {
-            let folderData = {
-                "folderId": responseData.folderId,
-                "title": responseData.title,
-                "userId": responseData.userId,
-                "contents": responseData.contentIds,
-                "status": response.status
-            }
-            commit('findFolderById', folderData)
-        } else {
-            commit('folderStatus', data.folderId);
-        }
-    },
-
-    async deleteFolder({ commit }, data) {
-        let http = `/api/v1/users/${data.userId}/folders/delete/${data.folderId}`;
-        let response = await axios.delete(http)
-            .catch(error => {
-                console.error('Error to delete folder: ', error);
-                throw error;
-            })
-        if (!response) {
-            commit('requestStatus', 'error');
-            return;
-        }
-        if (response.status >= 200 && response.status < 300) {
-            commit('deleteFolder', response.status)
-            commit('requestStatus', response.status)
-        } else {
-            commit('requestStatus', response.status);
-        }
-    },
-
-    async getContents({ commit }, data) {
-        let http = `/api/v1/users/${data.userId}/folders/${data.folderId}/contents`;
-        let response = await axios.get(http)
-            .catch(error => {
-                console.error('Error to show all contents for folder: ' + data.folderId, error);
-                throw error;
-            })
-        if (!response) {
-            commit('requestStatus', 'error');
-            return;
-        }
-        var responseData = {
-            "responseData": response.data,
-            "userId": data.userId,
-            "folderId": data.folderId,
-            "status": response.status,
-        }
-        if (response.status == 200) {
-            commit('getContents', responseData)
-        } else {
-            commit('requestStatus', response.status);
-        }
+        commit('insertFolderData', folderData);
+      } else {
+        commit('requestStatus', response.status);
+      }
+    } catch (error) {
+      console.error('Error during inserting the new FOLDER: ', error);
+      commit('requestStatus', 'error');
+      throw error;
     }
+  },
+  /**
+   * Updates an existing folder on the backend.
+   * @param {Object} commit - Vuex commit function.
+   * @param {Object} data - Folder data including ID, title, and userId.
+   */
+  async updateFolder({ commit }, data) {
+    let http = `/api/v1/users/${data.userId}/folders/update/${data.folderId}`;
+    const folderDto = {
+      folderId: data.folderId,
+      title: data.title,
+      userId: data.userId
+    };
+    const formData = new FormData();
+    // Append the JSON DTO as a Blob with 'application/json' type
+    formData.append('folderDto', new Blob([JSON.stringify(folderDto)], { type: 'application/json' }));
+
+    try {
+      let response = await axios.put(http, formData, {
+        // 'Content-Type': 'multipart/form-data' is automatically set by Axios for FormData
+      });
+
+      if (response.status >= 200 && response.status < 300) {
+        console.log(" folder.js -> action -> update folder -> response status -> " + response.status);
+        commit('updated', {
+          folderId: response.data.folderId,
+          title: response.data.title,
+          userId: response.data.userId,
+          status: response.status
+        });
+        commit('requestStatus', response.status);
+      } else {
+        commit('requestStatus', response.status);
+      }
+    } catch (error) {
+      console.error('Error to update folder with id: ' + data.folderId, error);
+      commit('requestStatus', 'error');
+      throw error;
+    }
+  },
+
+  /**
+   * Updates the current folder ID in the state.
+   * @param {Object} commit - Vuex commit function.
+   * @param {string} folderId - The ID of the folder.
+   */
+  updateFolderId({ commit }, folderId) {
+    commit('changeFolderId', folderId);
+  },
+
+  /**
+   * Fetches all folders for a specific user.
+   * @param {Object} commit - Vuex commit function.
+   * @param {string} userId - The ID of the user.
+   * @returns {Array|null} An array of folders or null on failure.
+   */
+  async findAllFolders({ commit }, userId) {
+    let http = `/api/v1/users/${userId}/folders/all`;
+    try {
+      let response = await axios.get(http);
+      if (response.status === 200) {
+        console.log("All folders fetched:", response.data);
+        return response.data;
+      } else {
+        return null;
+      }
+    } catch (error) {
+      console.error('Error to show all folders: ', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Finds a specific folder by its ID for a given user.
+   * @param {Object} commit - Vuex commit function.
+   * @param {Object} data - Contains `userId` and `folderId`.
+   */
+  async findFolderById({ commit }, data) {
+    let http = `/api/v1/users/${data.userId}/folders/${data.folderId}`;
+    try {
+      let response = await axios.get(http);
+      let responseData = response.data;
+      if (response.status === 200) {
+        let folderData = {
+          "folderId": responseData.folderId,
+          "title": responseData.title,
+          "userId": responseData.userId,
+          "contents": responseData.contentIds,
+          "status": response.status
+        };
+        commit('findFolderById', folderData);
+      } else {
+        commit('folderStatus', data.folderId);
+      }
+    } catch (error) {
+      console.error('Error to find folder by id: ' + data.folderId, error);
+      commit('errorFolderId', { errorStatus: error.response?.status || 'network error', folderId: data.folderId });
+      throw error;
+    }
+  },
+
+  /**
+   * Deletes a specific folder for a given user.
+   * @param {Object} commit - Vuex commit function.
+   * @param {Object} data - Contains `userId` and `folderId`.
+   */
+  async deleteFolder({ commit }, data) {
+    let http = `/api/v1/users/${data.userId}/folders/delete/${data.folderId}`;
+    try {
+      let response = await axios.delete(http);
+      if (response.status >= 200 && response.status < 300) {
+        commit('deleteFolder', response.status);
+        commit('requestStatus', response.status);
+      } else {
+        commit('requestStatus', response.status);
+      }
+    } catch (error) {
+      console.error('Error to delete folder: ', error);
+      commit('requestStatus', 'error');
+      throw error;
+    }
+  },
+
+  /**
+   * Fetches all contents within a specific folder for a given user.
+   * @param {Object} commit - Vuex commit function.
+   * @param {Object} data - Contains `userId` and `folderId`.
+   */
+  async getContents({ commit }, data) {
+    let http = `/api/v1/users/${data.userId}/folders/${data.folderId}/contents`;
+    try {
+      let response = await axios.get(http);
+      var responseData = {
+        "responseData": response.data,
+        "userId": data.userId,
+        "folderId": data.folderId,
+        "status": response.status,
+      };
+      if (response.status === 200) {
+        commit('getContents', responseData);
+      } else {
+        commit('requestStatus', response.status);
+      }
+    } catch (error) {
+      console.error('Error to show all contents for folder: ' + data.folderId, error);
+      commit('requestStatus', 'error');
+      throw error;
+    }
+  }
 };
 
 const getters = {
-    folderId(state) {
-        return state.folderId
-    },
-    title(state) {
-        return state.title
-    },
-    userId(state) {
-        return state.userId
-    },
-    contents(state) {
-        return state.contents
-    },
-    errorFolderId(state) {
-        return state.errorFolderId
-    },
-    folderStatus(state) {
-        return state.folderStatus
-    },
-    requestStatus(state) {
-        return state.requestStatus
-    },
-    errorStatus(state) {
-        return state.errorStatus
-    },
+  folderId: (state) => state.folderId,
+  title: (state) => state.title,
+  userId: (state) => state.userId,
+  contents: (state) => state.contents,
+  errorFolderId: (state) => state.errorFolderId,
+  folderStatus: (state) => state.folderStatus,
+  requestStatus: (state) => state.requestStatus,
+  errorStatus: (state) => state.errorStatus,
 };
 
 export default {
-    namespaced: true,
-    state,
-    mutations,
-    actions,
-    getters,
+  namespaced: true,
+  state,
+  mutations,
+  actions,
+  getters,
 };

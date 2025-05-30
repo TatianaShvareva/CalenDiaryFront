@@ -42,9 +42,9 @@
 </template>
 
 <script setup>
-// Можно оставить пустым
+
 </script>
 
 <style scoped>
-/* Ваши стили для страницы */
+
 </style>

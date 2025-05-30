@@ -1,24 +1,35 @@
 // src/services/authService.js
-import authApi from '@/api/authApi'; // Используем инстанс для AUTH бэкенда
+// Provides methods for user authentication and registration by interacting with the auth API.
+
+import authApi from '@/api/authApi'; // Axios instance configured for the authentication backend
 
 export const authService = {
+  /**
+   * Attempts to log in a user with the provided credentials.
+   * @param {Object} credentials - User login credentials (e.g., { email, password }).
+   * @returns {Promise<string>} A promise that resolves with the JWT token string on success.
+   * @throws {Error} Throws an error if the login fails.
+   */
   async login(credentials) {
     try {
       const response = await authApi.post('/auth/login', credentials);
-      // Если бэкенд возвращает ТОЛЬКО строку токена при успешном логине,
-      // то возвращаем именно эту строку.
-      return response.data; // Ожидается, что response.data будет строкой JWT
+      // Expects the backend to return the JWT token directly in response.data
+      return response.data;
     } catch (error) {
       console.error('Auth Service: Login failed:', error.response ? error.response.data : error.message);
-      throw error; // Перебрасываем ошибку для обработки на следующем уровне (Vuex action)
+      throw error;
     }
   },
 
+  /**
+   * Attempts to register a new user with the provided data.
+   * @param {Object} userData - User registration data.
+   * @returns {Promise<Object>} A promise that resolves with the backend response (e.g., { token: '...' } or { message: '...' }).
+   * @throws {Error} Throws an error if the registration fails.
+   */
   async register(userData) {
     try {
       const response = await authApi.post('/auth/register', userData);
-      // Для регистрации вы написали, что response.data может быть объектом с токеном или просто сообщением.
-      // Возвращаем как есть.
       return response.data;
     } catch (error) {
       console.error('Auth Service: Registration failed:', error.response ? error.response.data : error.message);
@@ -26,12 +37,19 @@ export const authService = {
     }
   },
 
+  /**
+   * (Optional) Calls a backend endpoint to invalidate session/token on the server side.
+   * This method might be empty if the backend doesn't require an explicit logout endpoint,
+   * relying instead on client-side token deletion.
+   * Current backend implementation does not provide a dedicated logout endpoint.
+   */
   async logoutBackend() {
     try {
-      // Пример: await authApi.post('/auth/logout'); // Если такой эндпоинт есть
-      console.log("Auth Service: Logout backend endpoint called (if exists).");
+      // Example: await authApi.post('/auth/logout'); // Uncomment if backend has a logout endpoint
+      console.log("Auth Service: Backend logout call (if endpoint exists).");
     } catch (error) {
       console.error('Auth Service: Error calling logout backend endpoint:', error);
+      // Do not re-throw error for logout, as client-side cleanup is primary
     }
   }
 };

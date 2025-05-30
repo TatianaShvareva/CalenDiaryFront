@@ -42,11 +42,11 @@
 </template>
 
 <script setup>
-// Если будет страница "Contact Us", то можно добавить router.push
+
 </script>
 
 <style scoped>
-/* Ваши стили для страницы */
+
 .v-expansion-panel {
   margin-bottom: 10px;
 }

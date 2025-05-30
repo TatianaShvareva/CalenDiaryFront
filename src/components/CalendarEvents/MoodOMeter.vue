@@ -5,7 +5,8 @@
       v-for="colorOption in moodOptions" :key="colorOption.value"
       location="top"
     >
-      <template #activator="{ props: activatorProps }"> <v-btn
+      <template #activator="{ props: activatorProps }">
+        <v-btn
           v-bind="activatorProps"
           :icon="colorOption.icon"
           :color="internalMood === colorOption.value ? colorOption.color : '#e0e0e0'"
@@ -21,26 +22,30 @@
 <script setup>
 import { ref, watch } from 'vue';
 
+// Define component properties for mood value (v-model)
 const props = defineProps({
   modelValue: {
-    type: [Number, null], // <-- ИЗМЕНЕНО: теперь принимает Number или null
+    type: [Number, null], 
     default: null,
   },
 });
 
+// Define emitted events
 const emit = defineEmits(['update:modelValue']);
 
+// Internal reactive state for the selected mood
 const internalMood = ref(props.modelValue);
 
-// ИЗМЕНЕНО: Теперь value числовое
+// Configuration for mood options, including value, color, icon, and label
 const moodOptions = [
-  { value: 5.0, color: '#43a047', icon: 'mdi-heart', label: 'Ecstatic (Best)' }, // Например, 5.0
-  { value: 4.0, color: '#8bc34a', icon: 'mdi-heart', label: 'Happy' },      // Например, 4.0
-  { value: 3.0, color: '#ffeb3b', icon: 'mdi-heart', label: 'Neutral' },    // Например, 3.0
-  { value: 2.0, color: '#ff9800', icon: 'mdi-heart', label: 'Sad' },        // Например, 2.0
-  { value: 1.0, color: '#e53935', icon: 'mdi-heart', label: 'Miserable (Worst)' }, // Например, 1.0
+  { value: 5.0, color: '#43a047', icon: 'mdi-heart', label: 'Ecstatic (Best)' }, 
+  { value: 4.0, color: '#8bc34a', icon: 'mdi-heart', label: 'Happy' },
+  { value: 3.0, color: '#ffeb3b', icon: 'mdi-heart', label: 'Neutral' },
+  { value: 2.0, color: '#ff9800', icon: 'mdi-heart', label: 'Sad' },
+  { value: 1.0, color: '#e53935', icon: 'mdi-heart', label: 'Miserable (Worst)' }, 
 ];
 
+// Watcher to synchronize internal state with the external `modelValue` prop
 watch(
   () => props.modelValue,
   (newValue) => {
@@ -48,22 +53,23 @@ watch(
   }
 );
 
+// Watcher to emit 'update:modelValue' when the internal mood selection changes
 watch(internalMood, (newValue) => {
-  emit('update:modelValue', newValue); // Теперь эмитится числовое значение
+  emit('update:modelValue', newValue); 
 });
 </script>
 
 <style scoped>
-/* Стили остаются без изменений */
+
 .mood-o-meter {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 10px; 
 }
 .mood-btn {
-  transition: box-shadow 0.2s;
+  transition: box-shadow 0.2s; 
 }
 .mood-btn:hover {
-  box-shadow: 0 0 8px #aaa;
+  box-shadow: 0 0 8px #aaa; 
 }
 </style>

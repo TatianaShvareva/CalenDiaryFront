@@ -96,7 +96,7 @@
 
 <script setup>
 import workInProgressImage from '@/assets/work in progress.png';
-import catLogo from '@/assets/logo.png'; // Логотип с котиком теперь catLogo
+import catLogo from '@/assets/logo.png'; 
 </script>
 
 <style scoped>
@@ -115,9 +115,6 @@ import catLogo from '@/assets/logo.png'; // Логотип с котиком т�
   object-fit: contain;
 }
 
-/* Удалена my-calendar-btn, т.к. кнопка будет убрана */
-
-/* Дополнительные стили для новых блоков */
 .feature-card {
   transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
   cursor: default;
@@ -125,15 +122,15 @@ import catLogo from '@/assets/logo.png'; // Логотип с котиком т�
 
 .feature-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12) !important; /* Увеличиваем тень при наведении */
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12) !important; 
 }
 
 .how-it-works-timeline .v-timeline-divider {
-  min-height: 70px; /* Отступ между элементами таймлайна */
+  min-height: 70px; 
 }
 
 .quote-card {
-  border-left: 8px solid var(--calendiary-primary); /* Декоративная полоска слева */
+  border-left: 8px solid var(--calendiary-primary); 
   text-align: center;
 }
 </style>

@@ -10,6 +10,7 @@ import FullCalendar from '@fullcalendar/vue3';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
 
+// Define component properties
 const props = defineProps({
   initialDate: {
     type: String,
@@ -19,40 +20,41 @@ const props = defineProps({
     type: Function,
     default: () => {},
   },
-  events: { // <--- НОВЫЙ ПРОПС
+  events: { 
     type: Array,
     default: () => [],
   },
 });
 
 onMounted(() => {
+  // Log the initial date received for debugging purposes
   console.log('CalendarSidebar: initialDate received:', props.initialDate);
+  // Validate initialDate to ensure it's a valid date string
   if (!props.initialDate || !new Date(props.initialDate).getTime()) {
     console.error('CalendarSidebar: initialDate is invalid or undefined!', props.initialDate);
   }
 });
 
-// Используем ref для options, чтобы FullCalendar мог реактивно обновляться
-const options = ref({ // <--- ОБЕРНУЛИ options в ref
+// FullCalendar options wrapped in a ref for reactivity
+const options = ref({
   plugins: [dayGridPlugin, interactionPlugin],
   initialDate: props.initialDate,
-  headerToolbar: false,
-  aspectRatio: 1,
-  dateClick: props.onDateClick,
-  height: 'auto',
-  contentHeight: 'auto',
-  events: props.events, // <--- ИСПОЛЬЗУЕМ НОВЫЙ ПРОПС ЗДЕСЬ
+  headerToolbar: false, // Hides the header toolbar (e.g., month/week buttons)
+  aspectRatio: 1,       // Maintains a square aspect ratio for the calendar grid
+  dateClick: props.onDateClick, // Callback function for date clicks
+  height: 'auto',       // Adjusts height automatically based on content
+  contentHeight: 'auto',// Adjusts content height automatically
+  events: props.events, // Binds events from props to the calendar
 });
 
-// Добавим watcher для обновления событий, когда они меняются в пропсах
+// Watcher to reactively update calendar events when the 'events' prop changes
 watch(() => props.events, (newEvents) => {
   options.value.events = newEvents;
-}, { deep: true }); // deep: true для глубокого отслеживания изменений в массиве событий
-
+}, { deep: true }); // 'deep: true' enables deep watching for changes within the events array
 </script>
 
 <style scoped>
-/* Стили остаются без изменений */
+/* Component-specific styles for the calendar sidebar */
 .calendar-sidebar {
   border: 1px solid #e0e0e0;
   padding: 10px;
@@ -61,6 +63,7 @@ watch(() => props.events, (newEvents) => {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
+/* FullCalendar override styles for specific layout adjustments */
 .fc-view-harness {
   max-width: 100% !important;
   height: auto !important;
@@ -116,7 +119,7 @@ watch(() => props.events, (newEvents) => {
 }
 
 .fc-event {
-  display: none !important;
+  display: none !important; /* Hides events in the sidebar mini-calendar */
 }
 
 .fc-daygrid-body-unbalanced .fc-daygrid-day {

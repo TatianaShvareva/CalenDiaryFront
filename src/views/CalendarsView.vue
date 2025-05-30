@@ -34,14 +34,15 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import listPlugin from '@fullcalendar/list';
-import enLocale from '@fullcalendar/core/locales/en-gb.js';
+import enLocale from '@fullcalendar/core/locales/en-gb.js'; 
 
-import calendarService from '@/services/calendarService';
+import calendarService from '@/services/calendarService'; 
 
 const router = useRouter();
-const fullCalendarRef = ref(null);
-const calendarTitle = ref('');
+const fullCalendarRef = ref(null); 
+const calendarTitle = ref(''); 
 
+// Reactive state for selected calendar view and available view options
 const currentView = ref('dayGridMonth');
 const calendarViews = ref([
   { title: 'Month', value: 'dayGridMonth' },
@@ -50,14 +51,15 @@ const calendarViews = ref([
   { title: 'List', value: 'listWeek' },
 ]);
 
-const events = ref([]);
-const calendiaryPrimary = computed(() => 'calendiary-primary');
+const events = ref([]); // Reactive array to store fetched calendar events
+const calendiaryPrimary = computed(() => 'calendiary-primary'); // Computed property for primary color
 
-// ====================================================================
-// ПЕРЕМЕСТИТЕ ФУНКЦИИ handleDateClick и handleEventClick СЮДА
-// ВЫШЕ ИХ ИСПОЛЬЗОВАНИЯ В calendarOptions
-// ====================================================================
 
+/**
+ * Formats a Date object into a 'YYYY-MM-DD' string for route parameters.
+ * @param {Date} date - The date object to format.
+ * @returns {string} The formatted date string.
+ */
 const formatDateForRoute = (date) => {
   const year = date.getFullYear();
   const month = (date.getMonth() + 1).toString().padStart(2, '0');
@@ -65,11 +67,21 @@ const formatDateForRoute = (date) => {
   return `${year}-${month}-${day}`;
 };
 
+/**
+ * Handles clicks on empty date slots in the calendar.
+ * Navigates to the add event page with the clicked date.
+ * @param {Object} clickInfo - FullCalendar click information object.
+ */
 function handleDateClick(clickInfo) {
   const formattedDate = formatDateForRoute(clickInfo.date);
   router.push(`/add-event/${formattedDate}`);
 }
 
+/**
+ * Handles clicks on existing events in the calendar.
+ * Navigates to the edit event page for the clicked event.
+ * @param {Object} clickInfo - FullCalendar event click information object.
+ */
 const handleEventClick = (clickInfo) => {
   const eventId = clickInfo.event.id;
   if (eventId) {
@@ -80,14 +92,14 @@ const handleEventClick = (clickInfo) => {
   }
 };
 
-// ====================================================================
-// КОНЕЦ ПЕРЕМЕЩЕННЫХ ФУНКЦИЙ
-// ====================================================================
 
-
+/**
+ * Fetches events from the backend, processes them, and updates the calendar.
+ */
 const fetchEvents = async () => {
   try {
     const fetchedEvents = await calendarService.getAllEvents();
+    // Map backend event structure to FullCalendar event object structure
     events.value = fetchedEvents.map(event => ({
       id: event.id,
       title: event.title,
@@ -104,16 +116,12 @@ const fetchEvents = async () => {
       }
     }));
 
-    console.log(fetchedEvents)
-
-    console.log('Processed events for FullCalendar:', events.value);
-
+    // Update FullCalendar instance with new events
     const calendarApi = fullCalendarRef.value?.getApi();
     if (calendarApi) {
       calendarApi.removeAllEvents();
       calendarApi.addEventSource(events.value);
     }
-
   } catch (error) {
     console.error('Failed to fetch events from backend:', error.response ? error.response.data : error.message);
     alert('Failed to load events. Please ensure you are logged in and the backend is running.');
@@ -121,26 +129,28 @@ const fetchEvents = async () => {
 };
 
 
+// FullCalendar options configuration
 const calendarOptions = ref({
   plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin],
   initialView: currentView.value,
   locale: enLocale,
   timeZone: 'UTC',
-  headerToolbar: false,
+  headerToolbar: false, 
   datesSet: () => {
+    // Callback fired when dates are set (e.g., view changed, next/prev clicked)
     const calendarApi = fullCalendarRef.value?.getApi();
     if (calendarApi) {
       calendarTitle.value = calendarApi.getCurrentData().viewTitle;
-      fetchEvents();
+      fetchEvents(); // Re-fetch events when dates change (e.g., month/week change)
     }
   },
-  editable: true,
-  selectable: true,
-  dateClick: handleDateClick, // <-- Теперь handleDateClick объявлен
-  eventClick: handleEventClick, // <-- Теперь handleEventClick объявлен
-  events: events.value,
+  editable: true, 
+  selectable: true, 
+  dateClick: handleDateClick, 
+  eventClick: handleEventClick, 
+  events: events.value, 
   eventChange: async (changeInfo) => {
-    console.log('Event changed (UI):', changeInfo.event.title);
+    
     try {
       const updatedEventData = {
         title: changeInfo.event.title,
@@ -153,21 +163,21 @@ const calendarOptions = ref({
         moodRating: changeInfo.event.extendedProps.moodRating || null,
       };
       await calendarService.updateEvent(changeInfo.event.id, updatedEventData);
-      console.log('Event updated on backend successfully:', changeInfo.event.id);
     } catch (error) {
       console.error('Failed to update event on backend:', error.response ? error.response.data : error.message);
       alert('Failed to update event. Please refresh and try again.');
-      changeInfo.revert();
+      changeInfo.revert(); 
     }
   },
-  eventColor: '#80CBC4',
-  eventTextColor: '#FFFFFF',
-  dayHeaders: true,
-  slotMinTime: '08:00:00',
-  slotMaxTime: '22:00:00',
-  nowIndicator: true,
+  eventColor: '#80CBC4', 
+  eventTextColor: '#FFFFFF', 
+  dayHeaders: true, 
+  slotMinTime: '08:00:00', 
+  slotMaxTime: '22:00:00', 
+  nowIndicator: true, 
 });
 
+// Watch for changes in currentView and update calendar view
 watch(currentView, (newViewValue) => {
   const calendarApi = fullCalendarRef.value?.getApi();
   if (calendarApi) {
@@ -175,18 +185,28 @@ watch(currentView, (newViewValue) => {
   }
 });
 
+/**
+ * Navigates the calendar to the previous period (month, week, or day).
+ */
 const goToPrev = () => {
   fullCalendarRef.value?.getApi().prev();
 };
 
+/**
+ * Navigates the calendar to the next period (month, week, or day).
+ */
 const goToNext = () => {
   fullCalendarRef.value?.getApi().next();
 };
 
+/**
+ * Navigates the calendar to today's date.
+ */
 const goToToday = () => {
   fullCalendarRef.value?.getApi().today();
 };
 
+// On component mount, initialize calendar title and fetch events
 onMounted(() => {
   const calendarApi = fullCalendarRef.value?.getApi();
   if (calendarApi) {
@@ -197,14 +217,13 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
-/* Your existing styles remain unchanged */
+
 .full-calendar-wrapper {
   background-color: #FFFFFF;
   border-radius: var(--border-radius-base);
   box-shadow: var(--box-shadow-light);
   padding: 0 !important;
   margin: 24px auto;
-  /* less margin at top, none at bottom */
   max-width: 1200px;
 }
 

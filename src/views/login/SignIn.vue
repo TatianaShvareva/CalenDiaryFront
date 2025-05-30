@@ -42,7 +42,6 @@
               <v-icon start>mdi-github</v-icon>
               Login via GitHub
             </v-btn>
-
           </v-form>
 
           <v-card-actions class="justify-center pt-4">
@@ -60,47 +59,55 @@ import { mapGetters, mapActions } from 'vuex';
 import { VContainer, VRow, VCol, VCard, VCardTitle, VForm, VTextField, VBtn, VAlert, VCardActions, VDivider, VIcon } from 'vuetify/components';
 
 export default {
-  name: 'SignInView',
+  name: 'SignInView', // Component name
   components: {
     VContainer, VRow, VCol, VCard, VCardTitle, VForm, VTextField, VBtn, VAlert, VCardActions, VDivider, VIcon,
   },
   data() {
     return {
+      // Data model for sign-in credentials
       credentials: {
         email: '',
         password: ''
       }
     }
   },
-
   methods: {
-    // ДОБАВЛЕН initiateGithubLogin
+    // Map Vuex actions for sign-in and GitHub OAuth
     ...mapActions('auth', ['signIn', 'initiateGithubLogin']),
 
+    /**
+     * Handles local sign-in: clears previous errors and dispatches 'signIn' action to Vuex store.
+     */
     async signInLocal() {
-      this.$store.commit('auth/CLEAR_AUTH_ERRORS');
+      this.$store.commit('auth/CLEAR_AUTH_ERRORS'); // Clear any previous auth errors
       try {
         await this.signIn(this.credentials);
+        // Redirection upon successful sign-in is handled by the Vuex action.
       } catch (error) {
+        // Error will be displayed via 'signInError' mapped from Vuex state.
         console.log('Sign In dispatch failed in component (expected for invalid credentials).');
-        // Ошибка будет отображена через signInError в v-alert
       }
     },
-    // НОВЫЙ МЕТОД ДЛЯ GITHUB
+
+    /**
+     * Initiates the GitHub OAuth2 login flow by dispatching the 'initiateGithubLogin' Vuex action.
+     */
     signInWithGithub() {
-      this.initiateGithubLogin(); // Вызываем Vuex action для GitHub OAuth2
+      this.initiateGithubLogin();
     }
   },
-
   computed: {
+    // Map Vuex getters for authentication status and sign-in error
     ...mapGetters('auth', ['authenticated', 'signInError']),
   },
   mounted() {
+   
     this.$store.commit('auth/CLEAR_AUTH_ERRORS');
   }
 }
 </script>
 
 <style scoped>
-/* Component-specific styles can be added here */
+
 </style>
