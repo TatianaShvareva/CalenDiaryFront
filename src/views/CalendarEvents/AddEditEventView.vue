@@ -1,75 +1,44 @@
 <template>
   <div class="add-edit-event-view">
     <v-container fluid class="py-6 px-4">
-      <h1 class="text-h5 mb-6 text-center text-md-left">
+      <h1 class="text-h5 text-sm-h5 text-xs-h6 mb-6 text-center text-md-left">
         {{ isEditMode ? 'Edit Event' : 'What is your day today?' }} - {{ formattedSelectedDate }}
       </h1>
 
       <v-row>
-        <v-col cols="12" md="4" class="d-flex align-self-start">
-          <CalendarSidebar
-            :initial-date="sidebarInitialDate"
-            :on-date-click="handleMiniCalendarDateClick"
-            :events="allCalendarEvents"
-            class="flex-grow-1"
-          />
+        <v-col cols="12" md="4" class="d-none d-md-flex align-self-start">
+          <CalendarSidebar :initial-date="sidebarInitialDate" :on-date-click="handleMiniCalendarDateClick"
+            :events="allCalendarEvents" class="flex-grow-1" />
         </v-col>
         <v-col cols="12" md="8">
-          <v-card flat class="pa-4 pa-sm-6 elevation-1">
+          <v-card flat class="pa-4 pa-sm-6 elevation-1 pb-6">
             <div class="event-form">
-              <v-text-field
-                label="Event Title"
-                v-model="eventTitle"
-                variant="outlined"
-                density="comfortable"
-                hide-details
-              ></v-text-field>
+              <v-text-field label="Event Title" v-model="eventTitle" variant="outlined" density="comfortable"
+                hide-details="auto"></v-text-field>
 
               <div class="time-pickers">
-                <TimePicker
-                  label="From"
-                  v-model="fromTime"
-                  density="comfortable"
-                  variant="outlined"
-                  style="max-width: 170px;"
-                />
-                <DateAndTimePicker
-                  v-model="untilDateTime"
-                  label="Until"
-                  density="comfortable"
-                  variant="outlined"
-                  style="max-width: 220px;"
-                />
+                <v-col cols="12" sm="6" md="4" class="pa-0">
+                  <TimePicker label="From" v-model="fromTime" density="comfortable" variant="outlined"
+                    hide-details="auto" />
+                </v-col>
+                <v-col cols="12" sm="6" md="5" class="pa-0">
+                  <DateAndTimePicker v-model="untilDateTime" label="Until" density="comfortable" variant="outlined"
+                    hide-details="auto" />
+                </v-col>
               </div>
 
-              <v-text-field
-                label="Location"
-                v-model="location"
-                variant="outlined"
-                density="comfortable"
-                hide-details
-              ></v-text-field>
+              <v-text-field label="Location" v-model="location" variant="outlined" density="comfortable"
+                hide-details="auto"></v-text-field>
 
-              <v-textarea
-                label="Description"
-                v-model="description"
-                variant="outlined"
-                density="comfortable"
-                hide-details
-                rows="3"
-              ></v-textarea>
+              <v-textarea label="Description" v-model="description" variant="outlined" density="comfortable"
+                hide-details="auto" rows="3"></v-textarea>
 
               <EventTags v-model="selectedTags" :available-tags="availableTags" />
 
               <MoodOMeter v-model="mood" />
 
-              <v-textarea
-                label="Diary"
-                v-model="diaryEntry"
-                variant="outlined"
-                density="comfortable"
-                rows="4"
-              ></v-textarea>
+              <v-textarea label="Diary" v-model="diaryEntry" variant="outlined" density="comfortable"
+                rows="4"></v-textarea>
 
               <v-btn color="primary" class="mt-4" block @click="saveEvent">
                 {{ isEditMode ? 'Update Event' : 'Create Event' }}
@@ -139,11 +108,14 @@ const formattedSelectedDate = computed(() => {
 // Computed property to provide the initial date for the CalendarSidebar
 const sidebarInitialDate = computed(() => {
   const dateFromRoute = route.params.date;
+  let dateToFormat;
+
   if (dateFromRoute) {
-    // Parse the date string from the route into a Date object, ensuring correct timezone handling
-    return new Date(dateFromRoute + 'T00:00:00');
+    dateToFormat = new Date(dateFromRoute + 'T00:00:00');
+  } else {
+    dateToFormat = new Date();
   }
-  return new Date(); // Fallback to current date if no date in route
+  return format(dateToFormat, 'yyyy-MM-dd');
 });
 
 
@@ -344,7 +316,6 @@ watch(selectedDate, (newDate) => {
 <style scoped>
 /* Scoped styles for this component */
 .add-edit-event-view {
-  min-height: 100vh;
   background-color: #f5f5f5;
 }
 
@@ -358,20 +329,12 @@ watch(selectedDate, (newDate) => {
 
 .time-pickers {
   display: flex;
-  gap: 16px;
-  align-items: center;
   flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-start;;
 }
 
 .v-btn {
   text-transform: none;
-}
-
-.v-row {
-  flex-wrap: nowrap !important;
-}
-
-.v-col {
-  min-width: 0;
 }
 </style>

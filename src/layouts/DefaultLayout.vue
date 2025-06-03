@@ -271,11 +271,6 @@ const handleLogout = () => {
 .main-content-area {
   background-color: transparent; 
   padding-top: 64px; 
-  padding-bottom: 120px; 
-  min-height: calc(100vh - (64px + 120px)); 
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
 }
 
 .border-b {
