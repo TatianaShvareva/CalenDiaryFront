@@ -175,6 +175,7 @@ const calendarOptions = ref({
   slotMinTime: '08:00:00', 
   slotMaxTime: '22:00:00', 
   nowIndicator: true, 
+  height: 'auto'
 });
 
 // Watch for changes in currentView and update calendar view
@@ -224,30 +225,59 @@ onMounted(() => {
   box-shadow: var(--box-shadow-light);
   padding: 0 !important;
   margin: 24px auto;
-  max-width: 1200px;
+  max-width: 900px;
+  flex-grow: 1; 
+  display: flex;
+  flex-direction: column;
+}
+
+.full-calendar-wrapper .fc {
+  flex-grow: 1;
 }
 
 .fc .fc-daygrid-day-frame {
+  padding: 4px;
   border-radius: calc(var(--border-radius-base) / 2);
   transition: background-color 0.2s ease;
 }
 
+.fc-theme-standard td, .fc-theme-standard th {
+  border-color: rgba(0, 0, 0, 0.08) !important; 
+}
+
 .fc .fc-daygrid-day-frame:hover {
-  background-color: #FFFFFF !important;
+  background-color: #F8F8F8 !important;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
 
 .fc .fc-day-today {
-  background-color: #B2E5FC !important;
+  background-color: #E0F2F7 !important;
   border: 1px solid #90CAF9 !important;
   border-radius: calc(var(--border-radius-base) / 2);
+  position: relative;
+}
+
+.fc .fc-day-today::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px; 
+  height: 100%;
+  background-color: var(--calendiary-primary);
+  border-top-left-radius: calc(var(--border-radius-base) / 2);
+  border-bottom-left-radius: calc(var(--border-radius-base) / 2);
 }
 
 .fc-event {
-  border-radius: calc(var(--border-radius-base) / 2) !important;
+  border-radius: 6px !important; 
   font-weight: 500 !important;
   border: none !important;
-  background-color: #80CBC4 !important;
+  background-color: #80CBC4 !important; 
   color: #FFFFFF !important;
+  padding: 2px 6px !important; 
+  margin-bottom: 2px !important; 
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08); 
 }
 
 .fc .fc-toolbar-title {
@@ -263,7 +293,7 @@ onMounted(() => {
 }
 
 .fc-day-selected {
-  background-color: rgba(128, 203, 196, 0.1) !important;
+  background-color: rgba(128, 203, 196, 0.2) !important;
   border: 1px solid #80CBC4 !important;
 }
 
