@@ -27,7 +27,7 @@ body {
   margin: 0;
   padding: 0;
   overflow-x: hidden; // Prevents horizontal scrolling
-  overflow-y: auto;
+  overflow-y: auto; // Ensures vertical scrolling is enabled
   -webkit-font-smoothing: antialiased; 
   -moz-osx-font-smoothing: grayscale;  
 }

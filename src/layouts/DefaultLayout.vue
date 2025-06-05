@@ -32,7 +32,7 @@
       v-model="drawer"
       app
       temporary
-      location="left"
+      location="right"
     >
       <v-list nav dense>
         <v-list-item to="/" link>

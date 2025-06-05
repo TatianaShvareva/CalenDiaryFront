@@ -13,4 +13,6 @@ app.use(store);
 app.use(router);
 app.use(vuetify);
 
+import '@/assets/styles/fullcalendar-overrides.scss';
+
 app.mount('#app');

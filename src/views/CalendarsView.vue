@@ -4,6 +4,8 @@
       <v-toolbar-title class="ml-4 text-h5">CalenDiary</v-toolbar-title>
       <v-spacer></v-spacer>
 
+      <CountrySelector class="ml-2 mr-4" />
+
       <v-btn icon @click="goToPrev" aria-label="Previous month/week/day">
         <v-icon>mdi-chevron-left</v-icon>
       </v-btn>
@@ -34,13 +36,15 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import listPlugin from '@fullcalendar/list';
-import enLocale from '@fullcalendar/core/locales/en-gb.js'; 
+import enLocale from '@fullcalendar/core/locales/en-gb.js';
 
-import calendarService from '@/services/calendarService'; 
+import calendarService from '@/services/calendarService';
+import { useStore } from 'vuex';
+import CountrySelector from '@/components/User/CountrySelector.vue';
 
 const router = useRouter();
-const fullCalendarRef = ref(null); 
-const calendarTitle = ref(''); 
+const fullCalendarRef = ref(null);
+const calendarTitle = ref('');
 
 // Reactive state for selected calendar view and available view options
 const currentView = ref('dayGridMonth');
@@ -52,7 +56,12 @@ const calendarViews = ref([
 ]);
 
 const events = ref([]); // Reactive array to store fetched calendar events
-const calendiaryPrimary = computed(() => 'calendiary-primary'); // Computed property for primary color
+const calendiaryPrimary = computed(() => 'calendiary-primary');
+
+const store = useStore();
+
+const userCountryCode = computed(() => store.getters['user/countryCode']);
+const formattedHolidays = computed(() => store.getters['holidays/formattedHolidays']);
 
 
 /**
@@ -113,20 +122,25 @@ const fetchEvents = async () => {
         diaryEntry: event.diaryEntry,
         moodRating: event.moodRating,
         userId: event.userId,
-      }
+      },
+
+      classNames: ['user-event']
     }));
 
-    // Update FullCalendar instance with new events
-    const calendarApi = fullCalendarRef.value?.getApi();
-    if (calendarApi) {
-      calendarApi.removeAllEvents();
-      calendarApi.addEventSource(events.value);
-    }
+
   } catch (error) {
-    console.error('Failed to fetch events from backend:', error.response ? error.response.data : error.message);
-    alert('Failed to load events. Please ensure you are logged in and the backend is running.');
+    console.error('Failed to fetch user events from backend:', error.response ? error.response.data : error.message);
+    alert('Failed to load user events. Please ensure you are logged in and the backend is running.');
   }
 };
+
+
+const combinedEvents = computed(() => {
+
+  const userEventsArray = Array.isArray(events.value) ? events.value : [];
+  const holidayEventsArray = Array.isArray(formattedHolidays.value) ? formattedHolidays.value : [];
+  return [...userEventsArray, ...holidayEventsArray];
+});
 
 
 // FullCalendar options configuration
@@ -135,22 +149,33 @@ const calendarOptions = ref({
   initialView: currentView.value,
   locale: enLocale,
   timeZone: 'UTC',
-  headerToolbar: false, 
-  datesSet: () => {
+  headerToolbar: false,
+  datesSet: (dateInfo) => { // dateInfo содержит start, end, view, title
     // Callback fired when dates are set (e.g., view changed, next/prev clicked)
     const calendarApi = fullCalendarRef.value?.getApi();
     if (calendarApi) {
       calendarTitle.value = calendarApi.getCurrentData().viewTitle;
-      fetchEvents(); // Re-fetch events when dates change (e.g., month/week change)
+
+
+      const year = new Date(dateInfo.start).getFullYear();
+
+      store.dispatch('holidays/fetchHolidays', year);
+
+      fetchEvents();
     }
   },
-  editable: true, 
-  selectable: true, 
-  dateClick: handleDateClick, 
-  eventClick: handleEventClick, 
-  events: events.value, 
+  editable: true,
+  selectable: true,
+  dateClick: handleDateClick,
+  eventClick: handleEventClick,
+  events: combinedEvents,
   eventChange: async (changeInfo) => {
-    
+    if (changeInfo.event.extendedProps.category === 'Public Holiday') {
+      alert('Public holidays cannot be edited.');
+      changeInfo.revert();
+      return;
+    }
+
     try {
       const updatedEventData = {
         title: changeInfo.event.title,
@@ -166,15 +191,13 @@ const calendarOptions = ref({
     } catch (error) {
       console.error('Failed to update event on backend:', error.response ? error.response.data : error.message);
       alert('Failed to update event. Please refresh and try again.');
-      changeInfo.revert(); 
+      changeInfo.revert();
     }
   },
-  eventColor: '#80CBC4', 
-  eventTextColor: '#FFFFFF', 
-  dayHeaders: true, 
-  slotMinTime: '08:00:00', 
-  slotMaxTime: '22:00:00', 
-  nowIndicator: true, 
+  dayHeaders: true,
+  slotMinTime: '08:00:00',
+  slotMaxTime: '22:00:00',
+  nowIndicator: true,
   height: 'auto'
 });
 
@@ -207,17 +230,33 @@ const goToToday = () => {
   fullCalendarRef.value?.getApi().today();
 };
 
-// On component mount, initialize calendar title and fetch events
+watch(userCountryCode, (newCountryCode, oldCountryCode) => {
+  if (newCountryCode && newCountryCode !== oldCountryCode) {
+    console.log(`User country changed from ${oldCountryCode} to ${newCountryCode}. Reloading holidays.`);
+    const calendarApi = fullCalendarRef.value?.getApi();
+    if (calendarApi) {
+
+      const year = new Date(calendarApi.view.currentStart).getFullYear();
+      store.dispatch('holidays/fetchHolidays', year);
+    }
+  }
+});
+
+
 onMounted(() => {
   const calendarApi = fullCalendarRef.value?.getApi();
   if (calendarApi) {
     calendarTitle.value = calendarApi.getCurrentData().viewTitle;
+
+    const year = new Date(calendarApi.view.currentStart).getFullYear();
+    store.dispatch('holidays/fetchHolidays', year);
   }
   fetchEvents();
 });
 </script>
 
 <style lang="scss" scoped>
+@import '@/assets/styles/variables.scss';
 
 .full-calendar-wrapper {
   background-color: #FFFFFF;
@@ -226,7 +265,7 @@ onMounted(() => {
   padding: 0 !important;
   margin: 24px auto;
   max-width: 900px;
-  flex-grow: 1; 
+  flex-grow: 1;
   display: flex;
   flex-direction: column;
 }
@@ -241,13 +280,14 @@ onMounted(() => {
   transition: background-color 0.2s ease;
 }
 
-.fc-theme-standard td, .fc-theme-standard th {
-  border-color: rgba(0, 0, 0, 0.08) !important; 
+.fc-theme-standard td,
+.fc-theme-standard th {
+  border-color: rgba(0, 0, 0, 0.08) !important;
 }
 
 .fc .fc-daygrid-day-frame:hover {
   background-color: #F8F8F8 !important;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
 }
 
 .fc .fc-day-today {
@@ -262,7 +302,7 @@ onMounted(() => {
   position: absolute;
   top: 0;
   left: 0;
-  width: 4px; 
+  width: 4px;
   height: 100%;
   background-color: var(--calendiary-primary);
   border-top-left-radius: calc(var(--border-radius-base) / 2);
@@ -316,6 +356,25 @@ onMounted(() => {
 
 .fc .fc-icon {
   font-size: 1.2em;
+}
+
+.v-toolbar .v-select.country-selector {
+
+  .v-field--variant-solo-filled {
+    background-color: rgba(255, 255, 255, 0.2) !important;
+  }
+
+  .v-field__input {
+    color: #FFFFFF !important;
+  }
+
+  .v-field__label {
+    color: rgba(255, 255, 255, 0.7) !important;
+  }
+
+  .v-icon {
+    color: #FFFFFF !important;
+  }
 }
 
 .v-input--density-compact .v-field--variant-solo {
