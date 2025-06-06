@@ -1,19 +1,19 @@
 // src/router/index.js
 // Configures Vue Router for the CalenDiary application, defining routes and navigation guards.
 
-import { createRouter, createWebHistory } from 'vue-router';
-import HomeView from '@/views/HomeView.vue';
-import Registration from '@/views/Login/Registration.vue';
-import SignIn from '@/views/Login/SignIn.vue';
+import store from '@/store/store';
+import AddEditEventView from '@/views/CalendarEvents/AddEditEventView.vue';
 import CalendarsView from '@/views/CalendarsView.vue';
-import AddEditEventView from '@/views/CalendarEvents/AddEditEventView.vue'; 
-import store from '@/store/store'; 
+import HomeView from '@/views/HomeView.vue';
+import Registration from '@/views/login/Registration.vue';
+import SignIn from '@/views/login/SignIn.vue';
+import { createRouter, createWebHistory } from 'vue-router';
 
 // Information pages
-import PrivacyPolicyView from '@/views/Information/PrivacyPolicyView.vue';
-import FAQView from '@/views/Information/FAQView.vue';
 import AboutView from '@/views/Information/AboutView.vue';
 import ContactUsView from '@/views/Information/ContactUsView.vue';
+import FAQView from '@/views/Information/FAQView.vue';
+import PrivacyPolicyView from '@/views/Information/PrivacyPolicyView.vue';
 
 // Define all application routes
 const routes = [
