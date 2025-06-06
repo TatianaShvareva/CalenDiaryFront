@@ -2,9 +2,9 @@
 // This module provides an Axios instance for interacting with the main backend API.
 // It handles JWT token injection for authenticated requests and global error handling.
 
+import router from '@/router';
+import store from '@/store/store';
 import axios from 'axios';
-import store from '@/store/store'; 
-import router from '@/router';   
 
 // Base URL for the main application API.
 const API_BASE_URL = 'http://localhost:8002';
@@ -42,10 +42,10 @@ mainApi.interceptors.response.use(
     if (error.response && (error.response.status === 401 || error.response.status === 403)) {
       console.warn('Unauthorized or Forbidden access to Main API. Initiating logout and redirect.');
       const currentRouteName = router.currentRoute.value.name;
-      
+
       if (currentRouteName !== 'signin' && currentRouteName !== 'registration') {
-        store.dispatch('auth/logout'); 
-        router.push('/signin');       
+        store.dispatch('auth/logout');
+        router.push('/signin');
       }
     }
     return Promise.reject(error);

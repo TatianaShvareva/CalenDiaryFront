@@ -102,7 +102,7 @@ export default {
     ...mapGetters('auth', ['authenticated', 'signInError']),
   },
   mounted() {
-   
+
     this.$store.commit('auth/CLEAR_AUTH_ERRORS');
   }
 }

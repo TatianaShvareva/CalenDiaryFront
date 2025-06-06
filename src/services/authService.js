@@ -7,14 +7,20 @@ export const authService = {
   /**
    * Attempts to log in a user with the provided credentials.
    * @param {Object} credentials - User login credentials (e.g., { email, password }).
-   * @returns {Promise<string>} A promise that resolves with the JWT token string on success.
-   * @throws {Error} Throws an error if the login fails.
+   * @returns {Promise<Object>} A promise that resolves with the full AuthResponse object:
+   *    {
+   *      token: "JWT...",
+   *      userId: 123,
+   *      email: "user@example.com",
+   *      name: "John Doe",
+   *      oauthUser: false,
+   *      faceId: null
+   *    }
    */
   async login(credentials) {
     try {
       const response = await authApi.post('/auth/login', credentials);
-      // Expects the backend to return the JWT token directly in response.data
-      return response.data;
+      return response.data; // now contains full AuthResponse object
     } catch (error) {
       console.error('Auth Service: Login failed:', error.response ? error.response.data : error.message);
       throw error;
@@ -22,10 +28,9 @@ export const authService = {
   },
 
   /**
-   * Attempts to register a new user with the provided data.
-   * @param {Object} userData - User registration data.
-   * @returns {Promise<Object>} A promise that resolves with the backend response (e.g., { token: '...' } or { message: '...' }).
-   * @throws {Error} Throws an error if the registration fails.
+   * Registers a new user with the provided data.
+   * @param {Object} userData - User registration data (e.g., name, email, password).
+   * @returns {Promise<Object>} A promise that resolves with the full AuthResponse object.
    */
   async register(userData) {
     try {
@@ -38,18 +43,16 @@ export const authService = {
   },
 
   /**
-   * (Optional) Calls a backend endpoint to invalidate session/token on the server side.
-   * This method might be empty if the backend doesn't require an explicit logout endpoint,
-   * relying instead on client-side token deletion.
-   * Current backend implementation does not provide a dedicated logout endpoint.
+   * Optionally logs out the user on the backend (if an endpoint exists).
+   * Mainly used for client-side cleanup in this app.
    */
   async logoutBackend() {
     try {
-      // Example: await authApi.post('/auth/logout'); // Uncomment if backend has a logout endpoint
+      // Uncomment if backend logout endpoint is implemented
+      // await authApi.post('/auth/logout');
       console.log("Auth Service: Backend logout call (if endpoint exists).");
     } catch (error) {
       console.error('Auth Service: Error calling logout backend endpoint:', error);
-      // Do not re-throw error for logout, as client-side cleanup is primary
     }
   }
 };
