@@ -68,19 +68,19 @@ const holidays = {
 
                 return {
                     title: title,
-                    start: holiday.startDate, 
-                    end: holiday.endDate,   
-                    allDay: true,             
-                    display: 'background',    
+                    start: holiday.startDate,
+                    end: holiday.endDate,
+                    allDay: true,
+                    display: 'background',
                     id: holiday.id,
                     classNames: ['public-holiday'],
                     extendedProps: {
                         category: 'Public Holiday'
-                    }        
+                    }
                 };
             });
 
-            console.log("Formatted holidays for FullCalendar:", formatted); 
+            console.log("Formatted holidays for FullCalendar:", formatted);
             return formatted;
         },
     },
