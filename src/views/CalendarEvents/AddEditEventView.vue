@@ -27,8 +27,8 @@
                 </v-col>
               </div>
 
-              <v-text-field label="Location" v-model="location" variant="outlined" density="comfortable"
-                hide-details="auto"></v-text-field>
+              <LocationAutocomplete v-model="locationName" :initial-location-data="initialLocationData"
+                @location-selected="handleLocationSelected" />
 
               <v-textarea label="Description" v-model="description" variant="outlined" density="comfortable"
                 hide-details="auto" rows="3"></v-textarea>
@@ -64,6 +64,7 @@ import TimePicker from '@/components/CalendarEvents/TimePicker.vue';
 import DateAndTimePicker from '@/components/CalendarEvents/DateAndTimePicker.vue';
 import EventTags from '@/components/CalendarEvents/EventTags.vue';
 import MoodOMeter from '@/components/CalendarEvents/MoodOMeter.vue';
+import LocationAutocomplete from '@/components/CalendarEvents/LocationAutocomplete.vue';
 
 // Import service for API calls
 import calendarService from '@/services/calendarService';
@@ -78,7 +79,14 @@ const fromTime = ref('09:00'); // Default start time
 const untilDateTime = ref(''); // Default end date and time
 
 const eventTitle = ref('');
-const location = ref('');
+const locationName = ref('');
+const fullAddress = ref('');
+const latitude = ref(null);
+const longitude = ref(null);
+
+// NEW: Reactive variable to hold the initial location data for LocationAutocomplete
+const initialLocationData = ref({});
+
 const description = ref('');
 const selectedTags = ref([]);
 const availableTags = ref([
@@ -130,14 +138,12 @@ const initializeTimesForNewEvent = (dateString) => {
     const minute = String(dateObj.getMinutes()).padStart(2, '0');
     fromTime.value = `${hour}:${minute}`;
 
-    // Set end time to 1 hour after start time for new events
-    const initialEndDate = new Date(dateObj.getTime() + 60 * 60 * 1000);
+    const initialEndDate = new Date(dateObj.getTime() + 60 * 60 * 1000); // Set end time to 1 hour after start
     untilDateTime.value = format(initialEndDate, "yyyy-MM-dd'T'HH:mm");
   } else {
     console.error('Failed to parse date for time pickers:', dateString);
     fromTime.value = '09:00';
-    // Fallback: Use current date + 1 hour if dateString is invalid
-    untilDateTime.value = format(new Date(new Date().setHours(new Date().getHours() + 1)), "yyyy-MM-dd'T'HH:mm");
+    untilDateTime.value = format(new Date(new Date().setHours(new Date().getHours() + 1)), "yyyy-MM-dd'T'HH:mm"); // Fallback: Use current date + 1 hour
   }
 };
 
@@ -152,6 +158,26 @@ function handleMiniCalendarDateClick(arg) {
     initializeTimesForNewEvent(arg.dateStr);
   }
 }
+
+/**
+ * Handler for the 'location-selected' event from LocationAutocomplete.
+ * Stores the full location data.
+ * @param {Object} selectedLocation - The object containing locationName, fullAddress, latitude, longitude, and potentially addressDetails.
+ */
+const handleLocationSelected = (selectedLocation) => {
+  if (selectedLocation) {
+    locationName.value = selectedLocation.locationName;
+    fullAddress.value = selectedLocation.fullAddress;
+    latitude.value = selectedLocation.latitude;
+    longitude.value = selectedLocation.longitude;
+  } else {
+    // Clear all location fields if the selection is cleared
+    locationName.value = '';
+    fullAddress.value = '';
+    latitude.value = null;
+    longitude.value = null;
+  }
+};
 
 /**
  * Fetches all calendar events from the backend to populate the sidebar.
@@ -179,10 +205,25 @@ const fetchAllEvents = async () => {
 const loadEventForEdit = async (id) => {
   try {
     const event = await calendarService.getEventById(id);
+    eventId.value = event.id; // Ensure eventId is set for the computed `isEditMode`
     eventTitle.value = event.title;
     description.value = event.description;
-    location.value = event.location;
-    selectedTags.value = event.labels || [];
+    locationName.value = event.locationName; // Use new field name
+    fullAddress.value = event.fullAddress; // Load new field
+    latitude.value = event.latitude;     // Load new field
+    longitude.value = event.longitude;   // Load new field
+
+    // NEW: Populate initialLocationData for LocationAutocomplete
+    initialLocationData.value = {
+      locationName: event.locationName,
+      fullAddress: event.fullAddress,
+      latitude: event.latitude,
+      longitude: event.longitude,
+      // If your backend stores Nominatim's 'address' object, you might add it here too
+      // e.g., address: event.locationAddressDetails // if your backend stores this
+    };
+
+    selectedTags.value = event.labels || []; // Assumes labels are stored as array of strings or objects {name: "Tag"}
     mood.value = event.moodRating;
     diaryEntry.value = event.diaryEntry;
 
@@ -226,6 +267,10 @@ const saveEvent = async () => {
     alert('End time cannot be earlier than start time. Please adjust.');
     return;
   }
+  if (!eventTitle.value) {
+    alert('Event Title is required.');
+    return;
+  }
 
   console.log('untilDateTime.value before saving:', untilDateTime.value);
 
@@ -234,8 +279,11 @@ const saveEvent = async () => {
     description: description.value,
     startTime: format(startTime, "yyyy-MM-dd'T'HH:mm:ss"), // ISO 8601 with seconds
     endTime: format(endTime, "yyyy-MM-dd'T'HH:mm:ss"),   // ISO 8601 with seconds
-    location: location.value,
-    labels: selectedTags.value,
+    locationName: locationName.value, // Send locationName
+    fullAddress: fullAddress.value,   // Send fullAddress
+    latitude: latitude.value,         // Send latitude
+    longitude: longitude.value,       // Send longitude
+    labels: selectedTags.value, // Ensure this format matches your backend DTO (e.g., array of strings or array of {name: "tag"})
     diaryEntry: diaryEntry.value,
     moodRating: mood.value,
   };
@@ -331,7 +379,8 @@ watch(selectedDate, (newDate) => {
   display: flex;
   flex-wrap: wrap;
   gap: 16px;
-  align-items: flex-start;;
+  align-items: flex-start;
+  ;
 }
 
 .v-btn {

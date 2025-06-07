@@ -16,7 +16,8 @@ const authModule = {
       id: localStorage.getItem('userId') || null,
       name: localStorage.getItem('userName') || null,
       email: localStorage.getItem('userEmail') || null,
-      role: localStorage.getItem('userRole') || null,
+      oauthUser: localStorage.getItem('oauthUser') || null,
+      faceId: localStorage.getItem('faceId') || null,
     },
     signInError: null,
     registrationError: null
@@ -28,7 +29,8 @@ const authModule = {
     user: (state) => state.user,
     userName: (state) => state.user.name,
     userId: (state) => state.user.id,
-    userRole: (state) => state.user.role,
+    oauthUser: (state) => state.user.oauthUser,
+    faceId: (state) => state.user.faceId,
     signInError: (state) => state.signInError,
     registrationError: (state) => state.registrationError
   },
@@ -48,17 +50,20 @@ const authModule = {
         state.user.id = user.id;
         state.user.name = user.name;
         state.user.email = user.email;
-        state.user.role = user.role || 'USER';
+        state.user.oauthUser = user.oauthUser;
+        state.user.faceId = user.faceId;
         localStorage.setItem('userId', user.id);
         localStorage.setItem('userName', user.name);
         localStorage.setItem('userEmail', user.email);
-        localStorage.setItem('userRole', user.role || 'USER');
+        localStorage.setItem('oauthUser', user.oauthUser);
+        localStorage.setItem('faceId', user.faceId);
       } else {
-        state.user = { id: null, name: null, email: null, role: null };
+        state.user = { id: null, name: null, email: null, faceId: null, oauthUser: false };
         localStorage.removeItem('userId');
         localStorage.removeItem('userName');
         localStorage.removeItem('userEmail');
-        localStorage.removeItem('userRole');
+        localStorage.removeItem('faceId');
+        localStorage.removeItem('oauthUser');
       }
     },
 
@@ -78,7 +83,7 @@ const authModule = {
     LOGOUT(state) {
       state.jwtToken = null;
       state.isAuthenticated = false;
-      state.user = { id: null, name: null, email: null, role: null };
+      state.user = { id: null, name: null, email: null, faceId: null, oauthUser: null };
       localStorage.clear();
     }
   },
@@ -96,7 +101,8 @@ const authModule = {
               id: responseData.userId,
               name: responseData.name,
               email: responseData.email,
-              role: responseData.role
+              oauthUser: responseData.oauthUser,
+              faceId: responseData.faceId,
             }
           });
           alert('Registration successful! You are now logged in.');
@@ -130,7 +136,8 @@ const authModule = {
               id: responseData.userId,
               name: responseData.name,
               email: responseData.email,
-              role: responseData.role
+              oauthUser: responseData.oauthUser,
+              faceId: responseData.faceId,
             }
           });
           alert('Sign in successful!');
@@ -153,7 +160,7 @@ const authModule = {
 
     logout({ commit }) {
       commit('LOGOUT');
-      authService.logoutBackend();
+      //authService.logoutBackend();
       alert('Logged out successfully!');
       router.push('/');
     },
@@ -172,12 +179,13 @@ const authModule = {
         const name = (urlParams.get('username') || '').split('@')[0] || 'Unknown';
 
         const email = urlParams.get('username');
-        const role = urlParams.get('role');
 
         if (token) {
           commit('SET_AUTH_DATA', {
             token: token,
-            user: { id, name, email, role: role || 'USER' }
+          //     oauthUser: responseData.oauthUser,
+          // faceId: responseData.faceId,Add commentMore actions
+            user: { id, name, email, }
           });
           alert('Login via GitHub successful!');
           router.push('/calendars');

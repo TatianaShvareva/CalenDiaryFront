@@ -1,14 +1,13 @@
 // src/services/labelService.js
-// Provides methods for interacting with label-related endpoints of the main API.
+// Provides methods for interacting with label-related endpoints.
 
-import mainApi from '@/api/mainApi'; // Axios instance configured for the main backend API
+import mainApi from '@/api/mainApi';
 
-const LABEL_API_PREFIX = '/labels'; // Base path for the label controller endpoints
+const LABEL_API_PREFIX = '/labels'; // Base path for label endpoints
 
 const labelService = {
   /**
    * Fetches all labels available to the authenticated user.
-   * Corresponds to backend's GET /labels endpoint.
    * @returns {Promise<Array>} A promise that resolves with an array of label data.
    * @throws {Error} Throws an error if the API call fails.
    */
@@ -24,8 +23,7 @@ const labelService = {
 
   /**
    * Creates a new label.
-   * Corresponds to backend's POST /labels endpoint.
-   * @param {Object} labelData - The data for the label to be created.
+   * @param {Object} labelData - The data for the label to be created ({ name, color }).
    * @returns {Promise<Object>} A promise that resolves with the created label data.
    * @throws {Error} Throws an error if the API call fails.
    */
@@ -41,9 +39,8 @@ const labelService = {
 
   /**
    * Updates an existing label by its ID.
-   * Corresponds to backend's PUT /labels/{id} endpoint.
    * @param {string} id - The ID of the label to update.
-   * @param {Object} labelData - The updated data for the label.
+   * @param {Object} labelData - The updated data for the label ({ name, color }).
    * @returns {Promise<Object>} A promise that resolves with the updated label data.
    * @throws {Error} Throws an error if the API call fails.
    */
@@ -59,7 +56,6 @@ const labelService = {
 
   /**
    * Deletes a label by its ID.
-   * Corresponds to backend's DELETE /labels/{id} endpoint.
    * @param {string} id - The ID of the label to delete.
    * @returns {Promise<Object>} A promise that resolves with the deletion confirmation (or empty response).
    * @throws {Error} Throws an error if the API call fails.

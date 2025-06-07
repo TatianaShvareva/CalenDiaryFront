@@ -1,15 +1,13 @@
 // src/api/mainApi.js
-// This module provides an Axios instance for interacting with the main backend API.
-// It handles JWT token injection for authenticated requests and global error handling.
+// Configures an Axios instance for the main application API.
+// Handles JWT token injection and global error responses (401/403).
 
 import router from '@/router';
 import store from '@/store/store';
 import axios from 'axios';
 
-// Base URL for the main application API.
-const API_BASE_URL = 'http://localhost:8002';
+const API_BASE_URL = 'http://localhost:8002'; // Base URL for the main application API.
 
-// Create an Axios instance for the main API.
 const mainApi = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -17,9 +15,7 @@ const mainApi = axios.create({
   },
 });
 
-// Request Interceptor: Attaches JWT Authorization token to outgoing requests.
-// This ensures that all requests to the main API (which are typically authenticated)
-// include the necessary token from the Vuex store.
+// Request Interceptor: Attaches JWT token from Vuex store to Authorization header.
 mainApi.interceptors.request.use(
   (config) => {
     const token = store.getters['auth/jwtToken'];
@@ -28,19 +24,15 @@ mainApi.interceptors.request.use(
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// Response Interceptor: Handles API responses, especially for unauthorized (401) or forbidden (403) errors.
-// If a 401/403 status is received, it triggers a logout process and redirects the user to the sign-in page,
-// unless the current route is already sign-in or registration.
+// Response Interceptor: Handles 401/403 errors by logging out and redirecting to sign-in.
 mainApi.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-      console.warn('Unauthorized or Forbidden access to Main API. Initiating logout and redirect.');
+      console.warn('Main API: Unauthorized (401) or Forbidden (403) access. Initiating logout.');
       const currentRouteName = router.currentRoute.value.name;
 
       if (currentRouteName !== 'signin' && currentRouteName !== 'registration') {
@@ -55,40 +47,41 @@ mainApi.interceptors.response.use(
 export default mainApi;
 
 /**
- * Common Main API Endpoints (examples):
+ * Main API Endpoints used by the frontend (as per associated services):
  *
- * @endpoint GET /calendars
- * - Description: Retrieves a list of calendars for the authenticated user.
- * - Response: [{ id, name, color, ... }]
+ * Calendar Endpoints (from calendarService.js):
+ * @endpoint GET /calendar/my-entries
+ * - Description: Retrieves all calendar entries for the authenticated user.
  *
- * @endpoint POST /calendars
- * - Description: Creates a new calendar.
- * - Request Body: { name, color }
+ * @endpoint GET /calendar/my-entries/{id}
+ * - Description: Retrieves a specific calendar entry by ID.
  *
- * @endpoint PUT /calendars/{calendarId}
- * - Description: Updates an existing calendar.
- * - Request Body: { name, color }
+ * @endpoint POST /calendar/my-entries
+ * - Description: Creates a new calendar entry.
+ * - Request Body: { title, startTime, endTime, description, location, labels, diaryEntry, moodRating, userId }
  *
- * @endpoint DELETE /calendars/{calendarId}
- * - Description: Deletes a specific calendar.
+ * @endpoint PUT /calendar/my-entries/{id}
+ * - Description: Updates an existing calendar entry by ID.
+ * - Request Body: { title, startTime, endTime, description, location, labels, diaryEntry, moodRating }
  *
- * @endpoint GET /events
- * - Description: Retrieves events based on filters (e.g., date range, calendar ID).
- * - Query Params: startDate, endDate, calendarId
- * - Response: [{ id, title, start, end, ... }]
+ * @endpoint DELETE /calendar/my-entries/{id}
+ * - Description: Deletes a specific calendar entry by ID.
  *
- * @endpoint POST /events
- * - Description: Creates a new event.
- * - Request Body: { title, description, start, end, allDay, calendarId }
+ * @endpoint DELETE /calendar/my-entries
+ * - Description: Deletes all calendar entries for the authenticated user. (Use with caution!)
  *
- * @endpoint PUT /events/{eventId}
- * - Description: Updates an existing event.
- * - Request Body: { title, description, start, end, allDay, calendarId }
- *
- * @endpoint DELETE /events/{eventId}
- * - Description: Deletes a specific event.
- *
+ * Label Endpoints (from labelService.js):
  * @endpoint GET /labels
- * - Description: Retrieves available event labels/categories.
- * - Response: [{ id, name, color }]
+ * - Description: Retrieves all available event labels.
+ *
+ * @endpoint POST /labels
+ * - Description: Creates a new label.
+ * - Request Body: { name, color }
+ *
+ * @endpoint PUT /labels/{id}
+ * - Description: Updates an existing label by ID.
+ * - Request Body: { name, color }
+ *
+ * @endpoint DELETE /labels/{id}
+ * - Description: Deletes a specific label by ID.
  */

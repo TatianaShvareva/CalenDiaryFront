@@ -52,7 +52,7 @@
 
 <script>
 import { mapState } from 'vuex';
-import { VContainer, VRow, VCol, VCard, VCardTitle, VForm, VTextField, VBtn, VAlert, VCardActions } from 'vuetify/components';
+import { VAlert, VBtn, VCard, VCardActions, VCardTitle, VCol, VContainer, VForm, VRow, VTextField } from 'vuetify/components';
 
 export default {
   name: 'RegistrationView', // Component name for consistency

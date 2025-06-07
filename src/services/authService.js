@@ -41,20 +41,6 @@ export const authService = {
       throw error;
     }
   },
-
-  /**
-   * Optionally logs out the user on the backend (if an endpoint exists).
-   * Mainly used for client-side cleanup in this app.
-   */
-  async logoutBackend() {
-    try {
-      // Uncomment if backend logout endpoint is implemented
-      // await authApi.post('/auth/logout');
-      console.log("Auth Service: Backend logout call (if endpoint exists).");
-    } catch (error) {
-      console.error('Auth Service: Error calling logout backend endpoint:', error);
-    }
-  }
 };
 
 export default authService;

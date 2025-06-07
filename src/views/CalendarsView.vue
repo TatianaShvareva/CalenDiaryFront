@@ -18,8 +18,17 @@
 
       <v-spacer></v-spacer>
 
-      <v-select v-model="currentView" :items="calendarViews" class="ma-2" density="compact" label="View" variant="solo"
-        hide-details flat style="max-width: 150px;"></v-select>
+      <v-select
+        v-model="currentView"
+        :items="calendarViews"
+        class="ma-2"
+        density="compact"
+        label="View"
+        variant="solo"
+        hide-details
+        flat
+        style="max-width: 150px;"
+      ></v-select>
     </v-toolbar>
 
     <v-sheet class="pa-4 full-calendar-wrapper">
@@ -46,7 +55,6 @@ const router = useRouter();
 const fullCalendarRef = ref(null);
 const calendarTitle = ref('');
 
-// Reactive state for selected calendar view and available view options
 const currentView = ref('dayGridMonth');
 const calendarViews = ref([
   { title: 'Month', value: 'dayGridMonth' },
@@ -55,7 +63,7 @@ const calendarViews = ref([
   { title: 'List', value: 'listWeek' },
 ]);
 
-const events = ref([]); // Reactive array to store fetched calendar events
+const events = ref([]); // Stores fetched user calendar events
 const calendiaryPrimary = computed(() => 'calendiary-primary');
 
 const store = useStore();
@@ -77,8 +85,7 @@ const formatDateForRoute = (date) => {
 };
 
 /**
- * Handles clicks on empty date slots in the calendar.
- * Navigates to the add event page with the clicked date.
+ * Handles clicks on empty date slots, navigating to the add event page.
  * @param {Object} clickInfo - FullCalendar click information object.
  */
 function handleDateClick(clickInfo) {
@@ -87,8 +94,7 @@ function handleDateClick(clickInfo) {
 }
 
 /**
- * Handles clicks on existing events in the calendar.
- * Navigates to the edit event page for the clicked event.
+ * Handles clicks on existing events, navigating to the edit event page.
  * @param {Object} clickInfo - FullCalendar event click information object.
  */
 const handleEventClick = (clickInfo) => {
@@ -103,7 +109,7 @@ const handleEventClick = (clickInfo) => {
 
 
 /**
- * Fetches events from the backend, processes them, and updates the calendar.
+ * Fetches user events from the backend and updates the calendar's event source.
  */
 const fetchEvents = async () => {
   try {
@@ -117,17 +123,14 @@ const fetchEvents = async () => {
       allDay: false,
       extendedProps: {
         description: event.description,
-        location: event.location,
+        location: event.fullAddress || event.locationName || null, // Prefer fullAddress
         labels: event.labels,
         diaryEntry: event.diaryEntry,
         moodRating: event.moodRating,
         userId: event.userId,
       },
-
-      classNames: ['user-event']
+      classNames: ['user-event'] // Add class for custom styling
     }));
-
-
   } catch (error) {
     console.error('Failed to fetch user events from backend:', error.response ? error.response.data : error.message);
     alert('Failed to load user events. Please ensure you are logged in and the backend is running.');
@@ -135,11 +138,18 @@ const fetchEvents = async () => {
 };
 
 
+// Combines user events and fetched holidays for calendar display.
 const combinedEvents = computed(() => {
-
   const userEventsArray = Array.isArray(events.value) ? events.value : [];
   const holidayEventsArray = Array.isArray(formattedHolidays.value) ? formattedHolidays.value : [];
-  return [...userEventsArray, ...holidayEventsArray];
+
+  // Add class for holiday events for custom styling
+  const holidaysWithClass = holidayEventsArray.map(holiday => ({
+    ...holiday,
+    classNames: [...(holiday.classNames || []), 'holiday-event']
+  }));
+
+  return [...userEventsArray, ...holidaysWithClass];
 });
 
 
@@ -150,27 +160,23 @@ const calendarOptions = ref({
   locale: enLocale,
   timeZone: 'UTC',
   headerToolbar: false,
-  datesSet: (dateInfo) => { // dateInfo содержит start, end, view, title
-    // Callback fired when dates are set (e.g., view changed, next/prev clicked)
+  datesSet: (dateInfo) => { // Callback when calendar dates/view change
     const calendarApi = fullCalendarRef.value?.getApi();
     if (calendarApi) {
       calendarTitle.value = calendarApi.getCurrentData().viewTitle;
-
-
       const year = new Date(dateInfo.start).getFullYear();
-
       store.dispatch('holidays/fetchHolidays', year);
-
-      fetchEvents();
+      fetchEvents(); // Re-fetch user events for the new date range/view
     }
   },
   editable: true,
   selectable: true,
   dateClick: handleDateClick,
   eventClick: handleEventClick,
-  events: combinedEvents,
+  events: combinedEvents, // Use computed property for reactivity
   eventChange: async (changeInfo) => {
-    if (changeInfo.event.extendedProps.category === 'Public Holiday') {
+    // Prevent editing of public holidays
+    if (changeInfo.event.classNames.includes('holiday-event')) {
       alert('Public holidays cannot be edited.');
       changeInfo.revert();
       return;
@@ -198,10 +204,18 @@ const calendarOptions = ref({
   slotMinTime: '08:00:00',
   slotMaxTime: '22:00:00',
   nowIndicator: true,
-  height: 'auto'
+  height: 'auto',
+  // Custom event content rendering to include location for user events
+  eventContent: function (arg) {
+    let html = `${arg.event.title}`;
+    if (arg.event.classNames.includes('user-event') && arg.event.extendedProps.location) {
+      html += `<div class="event-location">${arg.event.extendedProps.location}</div>`;
+    }
+    return { html: html };
+  },
 });
 
-// Watch for changes in currentView and update calendar view
+// Watch for changes in currentView and update FullCalendar view.
 watch(currentView, (newViewValue) => {
   const calendarApi = fullCalendarRef.value?.getApi();
   if (calendarApi) {
@@ -209,45 +223,30 @@ watch(currentView, (newViewValue) => {
   }
 });
 
-/**
- * Navigates the calendar to the previous period (month, week, or day).
- */
-const goToPrev = () => {
-  fullCalendarRef.value?.getApi().prev();
-};
+/** Navigates the calendar to the previous period (month, week, or day). */
+const goToPrev = () => fullCalendarRef.value?.getApi().prev();
+/** Navigates the calendar to the next period (month, week, or day). */
+const goToNext = () => fullCalendarRef.value?.getApi().next();
+/** Navigates the calendar to today's date. */
+const goToToday = () => fullCalendarRef.value?.getApi().today();
 
-/**
- * Navigates the calendar to the next period (month, week, or day).
- */
-const goToNext = () => {
-  fullCalendarRef.value?.getApi().next();
-};
-
-/**
- * Navigates the calendar to today's date.
- */
-const goToToday = () => {
-  fullCalendarRef.value?.getApi().today();
-};
-
+// Watch for changes in user country code to re-fetch holidays.
 watch(userCountryCode, (newCountryCode, oldCountryCode) => {
   if (newCountryCode && newCountryCode !== oldCountryCode) {
     console.log(`User country changed from ${oldCountryCode} to ${newCountryCode}. Reloading holidays.`);
     const calendarApi = fullCalendarRef.value?.getApi();
     if (calendarApi) {
-
       const year = new Date(calendarApi.view.currentStart).getFullYear();
       store.dispatch('holidays/fetchHolidays', year);
     }
   }
 });
 
-
+// On component mount, initialize calendar title and fetch events/holidays.
 onMounted(() => {
   const calendarApi = fullCalendarRef.value?.getApi();
   if (calendarApi) {
     calendarTitle.value = calendarApi.getCurrentData().viewTitle;
-
     const year = new Date(calendarApi.view.currentStart).getFullYear();
     store.dispatch('holidays/fetchHolidays', year);
   }
@@ -257,6 +256,7 @@ onMounted(() => {
 
 <style lang="scss" scoped>
 @import '@/assets/styles/variables.scss';
+// Keep global FullCalendar overrides in a separate file, e.g., fullcalendar-overrides.scss
 
 .full-calendar-wrapper {
   background-color: #FFFFFF;
@@ -310,15 +310,25 @@ onMounted(() => {
 }
 
 .fc-event {
-  border-radius: 6px !important; 
-  font-weight: 500 !important;
+  border-radius: 6px !important;
   border: none !important;
-  background-color: #80CBC4 !important; 
-  color: #FFFFFF !important;
-  padding: 2px 6px !important; 
-  margin-bottom: 2px !important; 
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08); 
+  padding: 2px 6px !important;
+  margin-bottom: 2px !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
+
+// Styles for user events
+.fc-event.user-event {
+  background-color: #80CBC4 !important;
+  color: #000000 !important;
+}
+
+// Styles for holiday events
+.fc-event.holiday-event {
+  background-color: #f7d9d9 !important;
+  color: #c00000 !important;
+}
+
 
 .fc .fc-toolbar-title {
   font-size: 1.8rem;
@@ -359,7 +369,6 @@ onMounted(() => {
 }
 
 .v-toolbar .v-select.country-selector {
-
   .v-field--variant-solo-filled {
     background-color: rgba(255, 255, 255, 0.2) !important;
   }

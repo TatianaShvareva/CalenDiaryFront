@@ -2,10 +2,13 @@ import { createApp } from 'vue';
 import App from './App.vue';
 import router from './router';
 import vuetify from './plugins/vuetify';
-import { loadFonts } from './plugins/webfontloader';
 import store from './store/store';
 
-loadFonts();
+
+import '@fontsource/roboto/300.css'; 
+import '@fontsource/roboto/400.css'; 
+import '@fontsource/roboto/500.css'; 
+import '@fontsource/roboto/700.css'; 
 
 const app = createApp(App);
 

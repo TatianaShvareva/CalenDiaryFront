@@ -1,12 +1,11 @@
 // src/api/authApi.js
-// This module provides an Axios instance for interacting with the authentication backend.
+// Axios instance for the authentication backend API.
 
 import axios from 'axios';
 
-// Base URL for the authentication backend API.
 const AUTH_BASE_URL = 'http://localhost:8001';
 
-console.log('--- Debug: AUTH_BASE_URL in authApi.js is:', AUTH_BASE_URL);
+// console.log('--- Debug: AUTH_BASE_URL in authApi.js is:', AUTH_BASE_URL); // Debugging line, can be removed in production
 
 const authApi = axios.create({
   baseURL: AUTH_BASE_URL,
@@ -15,14 +14,13 @@ const authApi = axios.create({
   },
 });
 
-// Axios Interceptor for Response Handling:
-// This interceptor processes responses from the authentication API.
-// It's primarily used for error handling, especially for 401/403 status codes.
+// Intercepts and handles responses from the authentication API.
+// Primarily for error handling (e.g., 401/403 status codes).
 authApi.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-      console.warn('Authentication API returned 401/403 status. This usually indicates bad credentials or a failed authentication attempt.');
+      console.warn('Authentication API: Unauthorized (401) or Forbidden (403) status received.');
     }
     return Promise.reject(error);
   }
@@ -31,19 +29,15 @@ authApi.interceptors.response.use(
 export default authApi;
 
 /**
- * Common Authentication Endpoints (examples):
+ * Auth API Endpoints used by the frontend:
  *
  * @endpoint POST /auth/login
- * - Description: Authenticates a user and typically returns an access token.
+ * - Description: Authenticates a user.
  * - Request Body: { email, password }
- * - Response: { accessToken, refreshToken, userDetails }
+ * - Response: { accessToken }
  *
  * @endpoint POST /auth/register
- * - Description: Registers a new user account.
- * - Request Body: { email, password, firstName, lastName }
+ * - Description: Registers a new user.
+ * - Request Body: { email, password, name }
  * - Response: { message: "User registered successfully" } or { userId }
- *
- * @endpoint POST /auth/logout (if applicable to this backend, might be handled by resource server)
- * - Description: Invalidates the user's session or token.
- * - Request Body: (optional) { refreshToken }
  */
