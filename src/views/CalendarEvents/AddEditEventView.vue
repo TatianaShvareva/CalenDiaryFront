@@ -33,7 +33,17 @@
               <v-textarea label="Description" v-model="description" variant="outlined" density="comfortable"
                 hide-details="auto" rows="3"></v-textarea>
 
-              <EventTags v-model="selectedTags" :available-tags="availableTags" />
+              <EventTags v-model="selectedTags" :all-labels="allAvailableLabels" /> 
+              
+              <v-btn 
+                variant="outlined" 
+                color="info" 
+                class="mt-1" 
+                block 
+                @click="showManageLabelsDialog = true"
+              >
+                Manage Labels
+              </v-btn>
 
               <MoodOMeter v-model="mood" />
 
@@ -50,6 +60,12 @@
         </v-col>
       </v-row>
     </v-container>
+
+    <ManageLabelsDialog 
+      v-model="showManageLabelsDialog" 
+      :labels="allAvailableLabels"
+      @labels-changed="handleLabelsChanged"
+    />
   </div>
 </template>
 
@@ -65,18 +81,19 @@ import DateAndTimePicker from '@/components/CalendarEvents/DateAndTimePicker.vue
 import EventTags from '@/components/CalendarEvents/EventTags.vue';
 import MoodOMeter from '@/components/CalendarEvents/MoodOMeter.vue';
 import LocationAutocomplete from '@/components/CalendarEvents/LocationAutocomplete.vue';
+import ManageLabelsDialog from '@/components/CalendarEvents/ManageLabelsDialog.vue';
 
 // Import service for API calls
 import calendarService from '@/services/calendarService';
+import labelService from '@/services/labelService';
 
-const route = useRoute(); // Access current route
-const router = useRouter(); // Access router for navigation
+const route = useRoute();
+const router = useRouter();
 
-// Reactive state variables for event form
 const eventId = ref(null);
-const selectedDate = ref(null); // Initialized in onMounted based on route/current date
-const fromTime = ref('09:00'); // Default start time
-const untilDateTime = ref(''); // Default end date and time
+const selectedDate = ref(null);
+const fromTime = ref('09:00');
+const untilDateTime = ref('');
 
 const eventTitle = ref('');
 const locationName = ref('');
@@ -84,36 +101,27 @@ const fullAddress = ref('');
 const latitude = ref(null);
 const longitude = ref(null);
 
-// NEW: Reactive variable to hold the initial location data for LocationAutocomplete
 const initialLocationData = ref({});
 
 const description = ref('');
 const selectedTags = ref([]);
-const availableTags = ref([
-  'Study',
-  'Work',
-  'Personal Appointment',
-  'Healthcare',
-  'Sport Activity',
-  'Travel',
-  'Other',
-]);
+const allAvailableLabels = ref([]);
+
 const mood = ref(null);
 const diaryEntry = ref('');
 
-const allCalendarEvents = ref([]); // Stores events fetched for CalendarSidebar
+const allCalendarEvents = ref([]);
 
-// Computed property to determine if the component is in edit mode
+const showManageLabelsDialog = ref(false);
+
 const isEditMode = computed(() => !!eventId.value);
 
-// Computed property to format the selected date for display in the header
 const formattedSelectedDate = computed(() => {
   if (!selectedDate.value) return '';
   const dateObj = new Date(selectedDate.value);
-  return format(dateObj, 'd MMMM'); // e.g., "31 May"
+  return format(dateObj, 'd MMMM');
 });
 
-// Computed property to provide the initial date for the CalendarSidebar
 const sidebarInitialDate = computed(() => {
   const dateFromRoute = route.params.date;
   let dateToFormat;
@@ -126,10 +134,10 @@ const sidebarInitialDate = computed(() => {
   return format(dateToFormat, 'yyyy-MM-dd');
 });
 
-
 /**
- * Initializes the 'from' and 'until' time pickers for a new event.
- * @param {string} dateString - The date in 'YYYY-MM-DD' format.
+ * Initializes 'fromTime' and 'untilDateTime' based on the selected date.
+ * For new events, sets a default start time and an end time one hour later.
+ * @param {string} dateString - The selected date in 'YYYY-MM-DD' format.
  */
 const initializeTimesForNewEvent = (dateString) => {
   const dateObj = new Date(dateString);
@@ -138,31 +146,31 @@ const initializeTimesForNewEvent = (dateString) => {
     const minute = String(dateObj.getMinutes()).padStart(2, '0');
     fromTime.value = `${hour}:${minute}`;
 
-    const initialEndDate = new Date(dateObj.getTime() + 60 * 60 * 1000); // Set end time to 1 hour after start
+    const initialEndDate = new Date(dateObj.getTime() + 60 * 60 * 1000);
     untilDateTime.value = format(initialEndDate, "yyyy-MM-dd'T'HH:mm");
   } else {
     console.error('Failed to parse date for time pickers:', dateString);
     fromTime.value = '09:00';
-    untilDateTime.value = format(new Date(new Date().setHours(new Date().getHours() + 1)), "yyyy-MM-dd'T'HH:mm"); // Fallback: Use current date + 1 hour
+    untilDateTime.value = format(new Date(new Date().setHours(new Date().getHours() + 1)), "yyyy-MM-dd'T'HH:mm");
   }
 };
 
 /**
- * Handles date clicks on the mini calendar (CalendarSidebar).
- * Updates selectedDate and initializes times if it's a new event.
- * @param {Object} arg - FullCalendar date click argument object.
+ * Handles date clicks from the mini calendar sidebar.
+ * Updates the selected date and initializes times if not in edit mode.
+ * @param {object} arg - Object containing the clicked date string.
  */
 function handleMiniCalendarDateClick(arg) {
-  selectedDate.value = arg.dateStr; // arg.dateStr is already 'YYYY-MM-DD'
+  selectedDate.value = arg.dateStr;
   if (!isEditMode.value) {
     initializeTimesForNewEvent(arg.dateStr);
   }
 }
 
 /**
- * Handler for the 'location-selected' event from LocationAutocomplete.
- * Stores the full location data.
- * @param {Object} selectedLocation - The object containing locationName, fullAddress, latitude, longitude, and potentially addressDetails.
+ * Handles location selection from the autocomplete component.
+ * Updates location-related reactive variables.
+ * @param {object} selectedLocation - Object containing location details.
  */
 const handleLocationSelected = (selectedLocation) => {
   if (selectedLocation) {
@@ -171,7 +179,6 @@ const handleLocationSelected = (selectedLocation) => {
     latitude.value = selectedLocation.latitude;
     longitude.value = selectedLocation.longitude;
   } else {
-    // Clear all location fields if the selection is cleared
     locationName.value = '';
     fullAddress.value = '';
     latitude.value = null;
@@ -180,7 +187,7 @@ const handleLocationSelected = (selectedLocation) => {
 };
 
 /**
- * Fetches all calendar events from the backend to populate the sidebar.
+ * Fetches all calendar events for display in the sidebar.
  */
 const fetchAllEvents = async () => {
   try {
@@ -190,7 +197,6 @@ const fetchAllEvents = async () => {
       title: event.title,
       start: event.startTime,
       end: event.endTime,
-      // Map other FullCalendar compatible properties if needed
     }));
     console.log('Fetched and formatted all calendar events for sidebar:', allCalendarEvents.value);
   } catch (error) {
@@ -199,43 +205,71 @@ const fetchAllEvents = async () => {
 };
 
 /**
- * Loads event data from the backend for editing an existing event.
+ * Fetches all available labels from the backend.
+ */
+const fetchAllLabels = async () => {
+  try {
+    const labels = await labelService.getAllLabels();
+    allAvailableLabels.value = labels;
+    console.log('Fetched all available labels:', labels);
+  } catch (error) {
+    console.error('Failed to fetch all available labels:', error);
+  }
+};
+
+/**
+ * Handler for when labels are changed in the ManageLabelsDialog.
+ * Re-fetches labels and reloads event data if in edit mode.
+ */
+const handleLabelsChanged = async () => {
+  await fetchAllLabels();
+  if (isEditMode.value) {
+    await loadEventForEdit(eventId.value);
+  }
+};
+
+/**
+ * Loads event data for editing based on event ID.
  * @param {string} id - The ID of the event to load.
  */
 const loadEventForEdit = async (id) => {
   try {
     const event = await calendarService.getEventById(id);
-    eventId.value = event.id; // Ensure eventId is set for the computed `isEditMode`
+    eventId.value = event.id;
     eventTitle.value = event.title;
     description.value = event.description;
-    locationName.value = event.locationName; // Use new field name
-    fullAddress.value = event.fullAddress; // Load new field
-    latitude.value = event.latitude;     // Load new field
-    longitude.value = event.longitude;   // Load new field
+    locationName.value = event.locationName;
+    fullAddress.value = event.fullAddress;
+    latitude.value = event.latitude;
+    longitude.value = event.longitude;
 
-    // NEW: Populate initialLocationData for LocationAutocomplete
     initialLocationData.value = {
       locationName: event.locationName,
       fullAddress: event.fullAddress,
       latitude: event.latitude,
       longitude: event.longitude,
-      // If your backend stores Nominatim's 'address' object, you might add it here too
-      // e.g., address: event.locationAddressDetails // if your backend stores this
     };
 
-    selectedTags.value = event.labels || []; // Assumes labels are stored as array of strings or objects {name: "Tag"}
+    if (event.labels && Array.isArray(event.labels)) {
+        selectedTags.value = event.labels
+            .map(labelName => allAvailableLabels.value.find(l => l.name === labelName))
+            .filter(label => label);
+    } else {
+        selectedTags.value = [];
+    }
+    
     mood.value = event.moodRating;
     diaryEntry.value = event.diaryEntry;
 
     if (event.startTime) {
       const startDateTime = new Date(event.startTime);
-      selectedDate.value = format(startDateTime, 'yyyy-MM-dd'); // Set the selected date
+      selectedDate.value = format(startDateTime, 'yyyy-MM-dd');
       fromTime.value = format(startDateTime, 'HH:mm');
     }
     if (event.endTime) {
       untilDateTime.value = format(new Date(event.endTime), "yyyy-MM-dd'T'HH:mm");
     } else {
-      // Fallback: if endTime is missing, set to 1 hour after startTime
+      // If endTime is missing but startTime exists, default endTime to 1 hour after startTime
       if (event.startTime) {
         const startDateTime = new Date(event.startTime);
         const endDateTime = new Date(startDateTime.getTime() + 60 * 60 * 1000);
@@ -245,20 +279,18 @@ const loadEventForEdit = async (id) => {
   } catch (error) {
     console.error(`Failed to load event with ID ${id}:`, error.response ? error.response.data : error.message);
     alert(`Failed to load event. Error: ${error.response?.data || error.message}`);
-    router.push('/calendars'); // Redirect if event load fails
+    router.push('/calendars');
   }
 };
 
 /**
- * Saves or updates an event based on the current mode (create/edit).
+ * Saves the event (creates a new one or updates an existing one).
  */
 const saveEvent = async () => {
-  // Combine selected date and time for startTime
   const combinedStartTimeStr = `${selectedDate.value}T${fromTime.value}`;
   const startTime = new Date(combinedStartTimeStr);
-  const endTime = new Date(untilDateTime.value); // untilDateTime.value is already in 'YYYY-MM-DDTHH:mm' format
+  const endTime = new Date(untilDateTime.value);
 
-  // Input validation
   if (isNaN(startTime.getTime()) || isNaN(endTime.getTime())) {
     alert('Invalid date or time. Please check your inputs.');
     return;
@@ -277,13 +309,13 @@ const saveEvent = async () => {
   const eventPayload = {
     title: eventTitle.value,
     description: description.value,
-    startTime: format(startTime, "yyyy-MM-dd'T'HH:mm:ss"), // ISO 8601 with seconds
-    endTime: format(endTime, "yyyy-MM-dd'T'HH:mm:ss"),   // ISO 8601 with seconds
-    locationName: locationName.value, // Send locationName
-    fullAddress: fullAddress.value,   // Send fullAddress
-    latitude: latitude.value,         // Send latitude
-    longitude: longitude.value,       // Send longitude
-    labels: selectedTags.value, // Ensure this format matches your backend DTO (e.g., array of strings or array of {name: "tag"})
+    startTime: format(startTime, "yyyy-MM-dd'T'HH:mm:ss"),
+    endTime: format(endTime, "yyyy-MM-dd'T'HH:mm:ss"),
+    locationName: locationName.value,
+    fullAddress: fullAddress.value,
+    latitude: latitude.value,
+    longitude: longitude.value,
+    labels: selectedTags.value.map(label => label.name), 
     diaryEntry: diaryEntry.value,
     moodRating: mood.value,
   };
@@ -296,7 +328,7 @@ const saveEvent = async () => {
       await calendarService.createEvent(eventPayload);
       alert('Event created successfully!');
     }
-    router.push('/calendars'); // Redirect to calendars page after successful save
+    router.push('/calendars');
   } catch (error) {
     console.error('Failed to save event:', error.response ? error.response.data : error.message);
     alert(`Failed to save event. Error: ${error.response?.data || error.message}`);
@@ -304,14 +336,14 @@ const saveEvent = async () => {
 };
 
 /**
- * Deletes the current event if in edit mode.
+ * Deletes the current event.
  */
 const deleteEvent = async () => {
   if (confirm('Are you sure you want to delete this event?')) {
     try {
       await calendarService.deleteEvent(eventId.value);
       alert('Event deleted successfully!');
-      router.push('/calendars'); // Redirect to calendars page after deletion
+      router.push('/calendars');
     } catch (error) {
       console.error('Failed to delete event:', error.response ? error.response.data : error.message);
       alert(`Failed to delete event. Error: ${error.response?.data || error.message}`);
@@ -320,43 +352,40 @@ const deleteEvent = async () => {
 };
 
 /**
- * Cancels the current operation and navigates back to the calendars page.
+ * Redirects to the calendar view without saving changes.
  */
 const cancel = () => {
   router.push('/calendars');
 };
 
-// Lifecycle hook: executed after component is mounted to the DOM
 onMounted(async () => {
-  // 1. Initialize selectedDate based on route params or current date
+  // Determine the initial selected date for the event form
   if (route.params.date) {
-    selectedDate.value = String(route.params.date); // Set selectedDate from route
+    selectedDate.value = String(route.params.date);
     console.log('AddEditEventView: Initial selectedDate from route for creation:', selectedDate.value);
   } else {
-    selectedDate.value = format(new Date(), 'yyyy-MM-dd'); // Default to current date
+    selectedDate.value = format(new Date(), 'yyyy-MM-dd');
     console.warn('AddEditEventView: No date provided in route params. Using default today.');
   }
 
-  // 2. Fetch all events for the CalendarSidebar
+  // Fetch all labels and events for initial component setup
+  await fetchAllLabels(); 
   await fetchAllEvents();
 
-  // 3. Handle event loading (if in edit mode) or time initialization (if creating new event)
+  // If an event ID is present in the route, load event data for editing
   if (route.params.id) {
     eventId.value = route.params.id;
-    await loadEventForEdit(eventId.value); // Load all event data
+    await loadEventForEdit(eventId.value);
   } else {
-    // If not in edit mode (i.e., creating a new event)
+    // If no event ID, initialize times for a new event
     initializeTimesForNewEvent(selectedDate.value);
   }
 });
 
-// Watcher for selectedDate changes (e.g., when clicking dates in CalendarSidebar)
+// Watch selectedDate for any changes, though no direct action is strictly needed here for the sidebar.
 watch(selectedDate, (newDate) => {
   if (newDate) {
-    // No direct action needed here for sidebar, as sidebarInitialDate is computed
-    // and CalendarSidebar's internal watch handles prop changes.
-    // This watcher primarily helps in debugging or if more complex logic is needed
-    // when selectedDate changes from user interaction within this component.
+    // sidebarInitialDate is a computed property, so it will react to selectedDate changes automatically.
   }
 });
 </script>
