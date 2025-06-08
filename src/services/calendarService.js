@@ -55,6 +55,7 @@ const calendarService = {
 
   /**
    * Updates an existing calendar entry by its ID for the current user.
+   * Changed from PUT to PATCH to use the new backend endpoint.
    * @param {string} id - The ID of the event to update.
    * @param {Object} eventData - The updated data for the event.
    * @returns {Promise<Object>} A promise that resolves with the updated event data.
@@ -62,7 +63,7 @@ const calendarService = {
    */
   async updateEvent(id, eventData) {
     try {
-      const response = await mainApi.put(`${CALENDAR_API_PREFIX}/my-entries/${id}`, eventData);
+      const response = await mainApi.patch(`${CALENDAR_API_PREFIX}/my-entries/${id}`, eventData);
       return response.data;
     } catch (error) {
       console.error(`Error updating event with ID ${id}:`, error);

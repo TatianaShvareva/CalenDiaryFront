@@ -60,9 +60,9 @@ export default mainApi;
  * - Description: Creates a new calendar entry.
  * - Request Body: { title, startTime, endTime, description, location, labels, diaryEntry, moodRating, userId }
  *
- * @endpoint PUT /calendar/my-entries/{id}
- * - Description: Updates an existing calendar entry by ID.
- * - Request Body: { title, startTime, endTime, description, location, labels, diaryEntry, moodRating }
+ * @endpoint PATCH /calendar/my-entries/{id}
+ * - Description: Partially updates an existing calendar entry by ID.
+ * - Request Body: { title?, startTime?, endTime?, description?, location?, labels?, diaryEntry?, moodRating? } (fields are optional)
  *
  * @endpoint DELETE /calendar/my-entries/{id}
  * - Description: Deletes a specific calendar entry by ID.
