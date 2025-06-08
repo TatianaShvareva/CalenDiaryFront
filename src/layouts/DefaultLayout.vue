@@ -15,6 +15,10 @@
             append-icon="mdi-calendar">
             My Calendar
           </v-btn>
+          <v-btn v-if="authenticated"   @click="redirectToGarden" color="green" size="small" class="ml-2"
+            append-icon="mdi-flower">
+            My Garden
+          </v-btn>
           <v-btn v-if="!authenticated" to="/registration" color="primary" size="small" class="ml-2">
             Register
           </v-btn>
@@ -42,6 +46,10 @@
         <v-list-item v-if="authenticated" to="/calendars" link>
           <template v-slot:prepend><v-icon>mdi-calendar</v-icon></template>
           <v-list-item-title>My Calendar</v-list-item-title>
+        </v-list-item>
+        <v-list-item v-if="authenticated"   @click="redirectToGarden" link>
+          <template v-slot:prepend><v-icon>mdi-flower</v-icon></template>
+          <v-list-item-title>My Garden</v-list-item-title>
         </v-list-item>
         <v-list-item v-if="!authenticated" to="/registration" link>
           <template v-slot:prepend><v-icon>mdi-account-plus</v-icon></template>
@@ -263,6 +271,19 @@ const handleLogout = () => {
   store.dispatch('auth/logout');
   drawer.value = false; 
   router.push('/signin');
+};
+
+/**
+ * Redirects the user to the "My Garden" frontend with the JWT token in the URL.
+ */
+const redirectToGarden = () => {
+  const token = localStorage.getItem('jwt'); // Retrieve the JWT token
+  if (token) {
+    const gardenUrl = `http://localhost:5173?token=${token}`;
+    window.location.href = gardenUrl; // Redirect to the second frontend
+  } else {
+    console.error('JWT token not found. Please log in.');
+  }
 };
 </script>
 

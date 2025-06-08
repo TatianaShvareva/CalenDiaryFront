@@ -5,8 +5,8 @@ import store from '@/store/store';
 import AddEditEventView from '@/views/CalendarEvents/AddEditEventView.vue';
 import CalendarsView from '@/views/CalendarsView.vue';
 import HomeView from '@/views/HomeView.vue';
-import Registration from '@/views/Login/Registration.vue';
-import SignIn from '@/views/Login/SignIn.vue';
+import Registration from '@/views/login/Registration.vue';
+import SignIn from '@/views/login/SignIn.vue';
 import { createRouter, createWebHistory } from 'vue-router';
 
 // Information pages

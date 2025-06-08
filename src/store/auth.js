@@ -42,6 +42,7 @@ const authModule = {
 
       if (token) {
         localStorage.setItem('jwt', token);
+
       } else {
         localStorage.removeItem('jwt');
       }
