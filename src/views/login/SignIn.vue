@@ -42,6 +42,16 @@
               <v-icon start>mdi-github</v-icon>
               Login via GitHub
             </v-btn>
+
+            <v-btn
+              color="grey-darken-2"
+              block
+              size="large"
+              class="mt-2"
+              @click="redirectToFaceLogin"
+            >
+              Login via Face Recognition
+            </v-btn>
           </v-form>
 
           <v-card-actions class="justify-center pt-4">
@@ -95,7 +105,12 @@ export default {
      */
     signInWithGithub() {
       this.initiateGithubLogin();
+    },
+
+    redirectToFaceLogin() {
+      window.location.href = 'http://localhost:8081';
     }
+
   },
   computed: {
     // Map Vuex getters for authentication status and sign-in error

@@ -98,6 +98,56 @@ const routes = [
     component: ContactUsView,
     meta: { requiresAuth: false }
   },
+
+  {
+  path: '/face-login',
+  name: 'face-login',
+  beforeEnter: (to, from, next) => {
+    const params = new URLSearchParams(window.location.search);
+
+    const token = params.get('token');
+    const userId = params.get('userId');
+    const email = params.get('email');
+    const name = params.get('name');
+    const faceId = params.get('faceId');
+
+    if (token && userId) {
+      localStorage.setItem('token', token);
+      localStorage.setItem('userId', userId);
+      localStorage.setItem('email', email);
+      localStorage.setItem('name', name);
+      localStorage.setItem('faceId', faceId);
+
+      store.commit('auth/SET_AUTH_DATA', {
+        token: token,
+        user: {
+          id: userId,
+          name: name,
+          email: email,
+          oauthUser: false,
+          faceId: faceId,
+        }
+      // here
+      //store.commit('auth/setAuthenticated', true);
+      //store.commit('auth/setUser', {
+      //  userId,
+      //  email,
+      //  name,
+      //  faceId,
+      //  token
+      });
+
+      next('/calendars');
+    } else {
+      next('/registration');
+    }
+
+  },
+  component: { template: '<div></div>' }, // Заглушка
+  meta: { requiresAuth: false }
+},
+
+
 ];
 
 const router = createRouter({
